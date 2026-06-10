@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { format } from "date-fns";
 import { CalendarCheck, CalendarRange, Flame, Percent, Sun } from "lucide-react";

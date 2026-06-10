@@ -5,6 +5,7 @@ import { SessionProvider } from "@/components/shell/session-provider";
 import { CommandPaletteProvider } from "@/components/shell/command-palette";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -28,13 +29,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
       }}
     >
       <CommandPaletteProvider>
-        <div className="flex min-h-dvh">
-          <Sidebar />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar />
-            <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <TooltipProvider delayDuration={300}>
+          <div className="flex min-h-dvh">
+            <Sidebar />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Topbar />
+              <main className="flex-1 p-4 sm:p-6">{children}</main>
+            </div>
           </div>
-        </div>
+        </TooltipProvider>
       </CommandPaletteProvider>
     </SessionProvider>
   );

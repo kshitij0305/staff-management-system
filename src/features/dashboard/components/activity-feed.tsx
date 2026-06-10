@@ -53,8 +53,11 @@ export function ActivityFeed({ rows }: { rows: ActivityRow[] }) {
               <span className="font-medium">{row.actorName}</span>{" "}
               <span className="text-muted-foreground">{row.summary}</span>
             </p>
-            <span className="shrink-0 text-[11px] text-muted-foreground">
-              {formatDistanceToNow(new Date(row.createdAt), { addSuffix: true })}
+            <span className="shrink-0 text-[11px] text-muted-foreground" suppressHydrationWarning>
+              {formatDistanceToNow(
+                new Date(Math.min(new Date(row.createdAt).getTime(), Date.now())),
+                { addSuffix: true }
+              )}
             </span>
           </motion.li>
         );
