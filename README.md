@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VK Group Staff Management System
 
-## Getting Started
+A standalone, enterprise-grade staff and prospect management portal for VK Group (APN Solar Energy Pvt. Ltd.). Manages a five-level sales hierarchy — **Chairman → National Head → CSM → ASM → CPE** — with role-based dashboards, prospect collection, an interactive org chart and full activity logging.
 
-First, run the development server:
+Built with **Next.js 15 · TypeScript · Tailwind CSS v4 · shadcn/ui · Prisma + MongoDB · Framer Motion · Recharts**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Quick start
+
+1. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+2. **Configure the database** — create a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster (Prisma's MongoDB connector requires a replica set, which Atlas provides out of the box). Copy `.env.example` to `.env` and set:
+
+   ```env
+   DATABASE_URL="mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/vk_staff?retryWrites=true&w=majority"
+   JWT_SECRET="<openssl rand -base64 32>"
+   ```
+
+3. **Push the schema and seed demo data**
+
+   ```bash
+   npm run db:push
+   npm run db:seed
+   ```
+
+4. **Run**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open http://localhost:3000.
+
+## Demo logins (after seeding)
+
+Password for every account: `demo1234`
+
+| Role          | Email                   | What they see                                     |
+| ------------- | ----------------------- | ------------------------------------------------- |
+| Chairman      | chairman@vkgroup.in     | Company analytics, top performers, full org chart |
+| National Head | nationalhead@vkgroup.in | Same company-wide view                            |
+| CSM           | csm@vkgroup.in          | Their circle: ASMs + CPEs, team analytics         |
+| ASM           | asm@vkgroup.in          | Their CPEs, team leaderboard                      |
+| CPE           | cpe@vkgroup.in          | Personal dashboard + prospect submission          |
+
+## Features
+
+- **Auth** — email + password, JWT (jose) in an httpOnly cookie, edge middleware protecting `/dashboard/**` and `/api/**`. No public registration; accounts are created by managers.
+- **RBAC** — who-can-create-whom rules (Chairman→anyone, NH→CSM, CSM→ASM, ASM→CPE), subtree-scoped visibility on every query via a materialized `ancestorIds` path (one indexed filter, no recursive traversal).
+- **Employees** — create / edit / deactivate / reactivate / **transfer** (re-parents the whole subtree atomically), searchable table, rich profile pages.
+- **Prospects** — CPE submission form, table defaulting to the **last 3 days**, search, status + employee filters, date-range picker with presets, server pagination, filtered **CSV export**.
+- **Dashboards** — one `/dashboard` route, role-conditional widgets: animated KPI cards, 30-day trend chart, status donut, state bars, ASM/CPE leaderboards, team performance, personal streaks for CPEs.
+- **Hierarchy** — custom interactive SVG org chart: pan, wheel-zoom to cursor, expand/collapse per team, animated re-layout, click-through to profiles.
+- **Activity** — every mutation logged and shown in a scoped, filterable feed.
+- **UI** — light/dark theme, command palette (Ctrl+K), Framer Motion transitions, skeleton loaders, empty states, fully responsive.
+
+## Scripts
+
+| Command             | What it does                  |
+| ------------------- | ----------------------------- |
+| `npm run dev`       | Dev server (Turbopack)        |
+| `npm run build`     | Production build              |
+| `npm run db:push`   | Push Prisma schema to MongoDB |
+| `npm run db:seed`   | Wipe + seed demo company      |
+| `npm run typecheck` | TypeScript check              |
+
+## Architecture
+
+Feature-based layout: routes in `src/app/` are thin; domain code lives in `src/features/<feature>/` (components, schemas, queries). Shared primitives in `src/components/`, cross-cutting libs in `src/lib/` (`auth.ts`, `rbac.ts`, `prisma.ts`).
+
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+src/
+├── app/                # routes (pages + API) only
+├── features/
+│   ├── auth/           # login form
+│   ├── employees/      # table, dialogs, schemas
+│   ├── prospects/      # table, form, query builder
+│   ├── dashboard/      # role dashboards + chart widgets
+│   ├── hierarchy/      # org chart (layout algorithm + canvas)
+│   └── activity/       # feed + log writer
+├── components/         # shell, ui (shadcn), shared widgets
+└── lib/                # prisma, auth (JWT), rbac, constants
+```

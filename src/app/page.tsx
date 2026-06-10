@@ -1,102 +1,97 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, BarChart3, Network, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 
-export default function Home() {
+const FEATURES = [
+  {
+    icon: Network,
+    title: "Hierarchy built in",
+    body: "Chairman to CPE — one org chart, clear reporting lines, instant transfers.",
+  },
+  {
+    icon: BarChart3,
+    title: "Live performance",
+    body: "Prospect trends, leaderboards and interest rates, scoped to what you manage.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Role-based access",
+    body: "Everyone sees exactly their team and nothing more, enforced on every request.",
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="relative flex min-h-dvh flex-col overflow-hidden">
+      {/* backdrop */}
+      <div
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(55% 45% at 50% 0%, color-mix(in oklch, var(--primary) 13%, transparent) 0%, transparent 70%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.5] dark:opacity-[0.25]"
+        style={{
+          backgroundImage:
+            "linear-gradient(color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px)",
+          backgroundSize: "56px 56px",
+          maskImage: "radial-gradient(70% 60% at 50% 30%, black 0%, transparent 100%)",
+        }}
+      />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <header className="flex items-center justify-between px-6 py-5 sm:px-10">
+        <Logo />
+        <Button variant="outline" asChild>
+          <Link href="/login">Sign in</Link>
+        </Button>
+      </header>
+
+      <main className="flex flex-1 flex-col items-center justify-center px-6 pb-20 text-center">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <span className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+            VK Group · APN Solar Energy Pvt. Ltd.
+          </span>
+          <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
+            Your whole sales force,{" "}
+            <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
+              one portal
+            </span>
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
+            Manage employees, track every field visit and watch performance roll up the hierarchy —
+            from CPE to Chairman, in real time.
+          </p>
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <Button size="lg" asChild>
+              <Link href="/login">
+                Open dashboard <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-20 grid w-full max-w-4xl gap-4 sm:grid-cols-3">
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.title}
+              className="animate-in fade-in slide-in-from-bottom-6 rounded-xl border bg-card/70 p-5 text-left backdrop-blur duration-700"
+              style={{ animationDelay: `${150 + i * 120}ms`, animationFillMode: "backwards" }}
+            >
+              <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <f.icon className="size-4.5" />
+              </div>
+              <h3 className="mt-3 text-sm font-semibold">{f.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.body}</p>
+            </div>
+          ))}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      <footer className="px-6 py-5 text-center text-xs text-muted-foreground">
+        © {new Date().getFullYear()} VK Group — Staff Management System
       </footer>
     </div>
   );

@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CHAIRMAN
+  NATIONAL_HEAD
+  CSM
+  ASM
+  CPE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProspectStatus {
+  INTERESTED
+  NOT_INTERESTED
+  FOLLOW_UP
+}
+
+model User {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId   String         @unique
+  name         String
+  email        String         @unique
+  phone        String
+  passwordHash String
+  role         Role
+  status       EmployeeStatus @default(ACTIVE)
+  joiningDate  DateTime       @default(now())
+  managerId    String?        @db.ObjectId
+  manager      User?          @relation("Hierarchy", fields: [managerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  reports      User[]         @relation("Hierarchy")
+
+  // Materialized path: ids of every ancestor up to the root.
+  // Subtree queries become a single indexed `ancestorIds has <id>` filter.
+  ancestorIds  String[]       @db.ObjectId
+
+  city         String?
+  state        String?
+  avatarSeed   String?
+
+  prospects    Prospect[]
+  activityLogs ActivityLog[]
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([managerId])
+  @@index([ancestorIds])
+  @@index([role, status])
+}
+
+model Prospect {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  customerName  String
+  phone         String
+  address       String
+  city          String
+  state         String
+  visitDate     DateTime
+  status        ProspectStatus @default(FOLLOW_UP)
+  remarks       String?
+
+  collectedById String         @db.ObjectId
+  collectedBy   User           @relation(fields: [collectedById], references: [id])
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([collectedById, visitDate])
+  @@index([status])
+  @@index([visitDate])
+}
+
+model ActivityLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  actorId    String   @db.ObjectId
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String // EMPLOYEE_CREATED | EMPLOYEE_UPDATED | EMPLOYEE_DEACTIVATED | EMPLOYEE_REACTIVATED | EMPLOYEE_TRANSFERRED | PROSPECT_ADDED | PROSPECT_UPDATED | USER_LOGIN
+  targetType String // USER | PROSPECT | AUTH
+  targetId   String?  @db.ObjectId
+  summary    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([createdAt])
+}
