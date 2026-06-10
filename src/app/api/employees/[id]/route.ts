@@ -15,7 +15,8 @@ export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
 
   const employee = await prisma.user.findFirst({
-    where: { AND: [{ id }, { OR: [{ id: session.sub }, scopedUserWhere(session)] }] },
+    // scopedUserWhere already includes the viewer themselves; `{}` for executives = see all.
+    where: { AND: [{ id }, scopedUserWhere(session)] },
     select: {
       id: true,
       employeeId: true,
