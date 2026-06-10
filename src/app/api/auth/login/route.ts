@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { signSession, setSessionCookie } from "@/lib/auth";
+import { signSession, setSessionCookie, REMEMBER_DAYS } from "@/lib/auth";
 import { logActivity } from "@/features/activity/log";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  remember: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Enter a valid email and password" }, { status: 400 });
   }
 
-  const { email, password } = parsed.data;
+  const { email, password, remember } = parsed.data;
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 
   // Same error for unknown email / wrong password — don't leak which one.
@@ -36,13 +37,12 @@ export async function POST(req: Request) {
     );
   }
 
-  const token = await signSession({
-    sub: user.id,
-    role: user.role,
-    name: user.name,
-    employeeId: user.employeeId,
-  });
-  await setSessionCookie(token);
+  const days = remember ? REMEMBER_DAYS : undefined;
+  const token = await signSession(
+    { sub: user.id, role: user.role, name: user.name, employeeId: user.employeeId },
+    days
+  );
+  await setSessionCookie(token, days);
 
   await logActivity({
     actorId: user.id,

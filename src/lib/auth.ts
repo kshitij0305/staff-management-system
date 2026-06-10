@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 import type { Role } from "@prisma/client";
 
 export const SESSION_COOKIE = "vk_session";
+export const OAUTH_STATE_COOKIE = "vk_oauth_state";
 const SESSION_DAYS = 7;
+export const REMEMBER_DAYS = 30;
 
 export interface SessionPayload {
   sub: string; // user id
@@ -18,12 +20,15 @@ function secretKey() {
   return new TextEncoder().encode(secret);
 }
 
-export async function signSession(payload: SessionPayload): Promise<string> {
+export async function signSession(
+  payload: SessionPayload,
+  days: number = SESSION_DAYS
+): Promise<string> {
   return new SignJWT({ role: payload.role, name: payload.name, employeeId: payload.employeeId })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_DAYS}d`)
+    .setExpirationTime(`${days}d`)
     .sign(secretKey());
 }
 
@@ -50,14 +55,14 @@ export async function getSession(): Promise<SessionPayload | null> {
   return verifySessionToken(token);
 }
 
-export async function setSessionCookie(token: string) {
+export async function setSessionCookie(token: string, days: number = SESSION_DAYS) {
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_DAYS * 24 * 60 * 60,
+    maxAge: days * 24 * 60 * 60,
   });
 }
 
