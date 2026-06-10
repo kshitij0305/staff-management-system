@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { OAUTH_STATE_COOKIE } from "@/lib/auth";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 /** Step 1: redirect the user to Google's consent screen. */
 export async function GET(req: Request) {
+  const ipCheck = rateLimit(`oauth:ip:${clientIp(req)}`, 30, 15 * 60 * 1000);
+  if (!ipCheck.ok) {
+    return NextResponse.json(
+      { error: "Too many attempts. Try again later." },
+      { status: 429, headers: { "Retry-After": String(ipCheck.retryAfterSec) } }
+    );
+  }
+
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const url = new URL(req.url);
 

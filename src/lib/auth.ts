@@ -16,7 +16,13 @@ export interface SessionPayload {
 
 function secretKey() {
   const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET is not set");
+  if (!secret || secret.length < 16) {
+    throw new Error("JWT_SECRET is not set (needs at least 16 characters)");
+  }
+  // Refuse to run in production with the shipped dev secret.
+  if (process.env.NODE_ENV === "production" && secret.includes("dev-only")) {
+    throw new Error("JWT_SECRET still has the dev default — set a real secret before deploying");
+  }
   return new TextEncoder().encode(secret);
 }
 

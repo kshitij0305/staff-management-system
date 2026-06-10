@@ -48,7 +48,7 @@ Password for every account: `demo1234`
 
 ## Features
 
-- **Auth** — email + password, JWT (jose) in an httpOnly cookie, edge middleware protecting `/dashboard/**` and `/api/**`. No public registration; accounts are created by managers.
+- **Auth** — email + password or **Google sign-in**, JWT (jose) in an httpOnly cookie, optional 30-day "remember me", edge middleware protecting `/dashboard/**` and `/api/**`. No public registration; accounts are created by managers, and Google sign-in only works for emails that already belong to an employee.
 - **RBAC** — who-can-create-whom rules (Chairman→anyone, NH→CSM, CSM→ASM, ASM→CPE), subtree-scoped visibility on every query via a materialized `ancestorIds` path (one indexed filter, no recursive traversal).
 - **Employees** — create / edit / deactivate / reactivate / **transfer** (re-parents the whole subtree atomically), searchable table, rich profile pages.
 - **Prospects** — CPE submission form, table defaulting to the **last 3 days**, search, status + employee filters, date-range picker with presets, server pagination, filtered **CSV export**.
@@ -66,6 +66,24 @@ Password for every account: `demo1234`
 | `npm run db:push`   | Push Prisma schema to MongoDB |
 | `npm run db:seed`   | Wipe + seed demo company      |
 | `npm run typecheck` | TypeScript check              |
+
+## Security
+
+- **Sessions**: signed JWTs (HS256) in `httpOnly`, `SameSite=Lax` cookies (`Secure` in production); deactivated users are rejected at login, in middleware-protected APIs, and on every dashboard load.
+- **Brute-force protection**: login is rate-limited per IP (20/15 min) and per account (8/15 min) with `Retry-After`; successful sign-in clears the counters. In-memory store — swap `src/lib/rate-limit.ts` for Redis if you deploy multi-instance.
+- **No user enumeration**: unknown email and wrong password return the same message *and* take the same time (dummy bcrypt compare).
+- **CSRF**: `SameSite=Lax` cookies plus an Origin check on every state-changing API request; the Google OAuth flow is CSRF-protected with a state cookie.
+- **Headers**: CSP, `X-Frame-Options: DENY` (no clickjacking), `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS; `X-Powered-By` removed.
+- **RBAC**: every query is scope-filtered server-side via the materialized ancestor path — clients never decide what they can see.
+- **Inputs**: all mutations validated with zod; Prisma parameterizes all queries (no injection).
+- **Secrets**: the app refuses to start in production with the shipped dev `JWT_SECRET`. Generate one: `openssl rand -base64 32`.
+
+## Google sign-in setup
+
+1. [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials) → Create OAuth client ID (Web application).
+2. Add `http://localhost:3000/api/auth/google/callback` (and your production equivalent) to **Authorized redirect URIs**.
+3. Put the client ID + secret in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) and restart.
+4. The Google account's email must match an existing employee's email.
 
 ## Architecture
 

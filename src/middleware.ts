@@ -15,6 +15,20 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname.startsWith("/api")) {
+    // CSRF hardening: state-changing requests must come from our own origin.
+    // (SameSite=Lax already blocks most CSRF; this closes the rest.)
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+      const origin = req.headers.get("origin");
+      if (origin) {
+        try {
+          if (new URL(origin).host !== req.nextUrl.host) {
+            return NextResponse.json({ error: "Cross-origin request blocked" }, { status: 403 });
+          }
+        } catch {
+          return NextResponse.json({ error: "Cross-origin request blocked" }, { status: 403 });
+        }
+      }
+    }
     if (PUBLIC_API.some((p) => pathname.startsWith(p))) return NextResponse.next();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
