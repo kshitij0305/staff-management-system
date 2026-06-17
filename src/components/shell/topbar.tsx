@@ -27,6 +27,7 @@ const TITLES: [string, string][] = [
   ["/dashboard/prospects", "Prospects"],
   ["/dashboard/hierarchy", "Hierarchy"],
   ["/dashboard/activity", "Activity"],
+  ["/dashboard/settings", "Settings"],
   ["/dashboard", "Dashboard"],
 ];
 

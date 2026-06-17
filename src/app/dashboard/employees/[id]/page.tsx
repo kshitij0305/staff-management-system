@@ -4,7 +4,7 @@ import { format, formatDistanceToNow, subDays, startOfDay } from "date-fns";
 import { Mail, Phone, MapPin, CalendarDays, ArrowLeft, Users, ContactRound } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { scopedUserWhere } from "@/lib/rbac";
+import { scopedUserWhere, canManageUser } from "@/lib/rbac";
 import { ROLE_LABELS } from "@/lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { RoleBadge, EmployeeStatusBadge, ProspectStatusBadge } from "@/component
 import { UserAvatar } from "@/components/user-avatar";
 import { Sparkline } from "@/components/charts/sparkline";
 import { EmptyState } from "@/components/empty-state";
+import { EditProfileButton } from "@/features/employees/components/edit-profile-button";
 
 export default async function EmployeeProfilePage({
   params,
@@ -36,6 +37,7 @@ export default async function EmployeeProfilePage({
       joiningDate: true,
       city: true,
       state: true,
+      ancestorIds: true,
       manager: { select: { id: true, name: true, role: true } },
       reports: {
         select: {
@@ -50,6 +52,12 @@ export default async function EmployeeProfilePage({
     },
   });
   if (!employee) notFound();
+
+  const canManage = canManageUser(session, {
+    id: employee.id,
+    role: employee.role,
+    ancestorIds: employee.ancestorIds,
+  });
 
   const isCPE = employee.role === "CPE";
   // Prospects collected by this person, or — for managers — by anyone in their subtree.
@@ -157,10 +165,30 @@ export default async function EmployeeProfilePage({
               </span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="flex flex-col items-end gap-2 text-right">
+            {canManage && (
+              <EditProfileButton
+                employee={{
+                  id: employee.id,
+                  employeeId: employee.employeeId,
+                  name: employee.name,
+                  email: employee.email,
+                  phone: employee.phone,
+                  role: employee.role,
+                  status: employee.status,
+                  joiningDate: employee.joiningDate.toISOString(),
+                  city: employee.city,
+                  state: employee.state,
+                  manager: employee.manager
+                    ? { id: employee.manager.id, name: employee.manager.name }
+                    : null,
+                  _count: { reports: employee.reports.length, prospects: 0 },
+                }}
+              />
+            )}
             <div className="font-mono text-sm text-muted-foreground">{employee.employeeId}</div>
             {employee.manager && (
-              <div className="mt-1 text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 Reports to{" "}
                 <Link
                   href={`/dashboard/employees/${employee.manager.id}`}

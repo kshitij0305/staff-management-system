@@ -5,6 +5,7 @@ import {
   ContactRound,
   Network,
   Activity,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "Employees", href: "/dashboard/employees", icon: Users, roles: MANAGER_ROLES },
   { title: "Hierarchy", href: "/dashboard/hierarchy", icon: Network, roles: MANAGER_ROLES },
   { title: "Activity", href: "/dashboard/activity", icon: Activity },
+  { title: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function navItemsFor(role: Role): NavItem[] {
