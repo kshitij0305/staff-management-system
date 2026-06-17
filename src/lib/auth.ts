@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import type { Role } from "@prisma/client";
 
 export const SESSION_COOKIE = "vk_session";
-export const OAUTH_STATE_COOKIE = "vk_oauth_state";
 const SESSION_DAYS = 7;
 export const REMEMBER_DAYS = 30;
 

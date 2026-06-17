@@ -26,7 +26,7 @@ Five-level hierarchy · role-based dashboards · prospect tracking · interactiv
 
 ## ✨ Features
 
-- 🔐 **Authentication** — email + password **or Google sign-in**, JWT (jose) in an httpOnly cookie, optional 30-day *remember me*. No public registration — accounts are created by managers.
+- 🔐 **Authentication** — email + password, JWT (jose) in an httpOnly cookie, optional 30-day *remember me*. No public registration — accounts are created by managers.
 - 🏢 **5-level hierarchy** — `Chairman → National Head → CSM → ASM → CPE`, with who-can-create-whom rules enforced server-side.
 - 🛡️ **RBAC scoping** — every query is filtered to the viewer's subtree via a **materialized ancestor path** (one indexed filter, no recursive traversal).
 - 👥 **Employee management** — create · edit · deactivate/reactivate · **transfer** (re-parents the entire sub-team atomically) · rich profile pages with stats.
@@ -45,7 +45,7 @@ Five-level hierarchy · role-based dashboards · prospect tracking · interactiv
 | **Framework** | Next.js 15 (App Router) · React 19 · TypeScript |
 | **Styling** | Tailwind CSS v4 · shadcn/ui (radix-nova) · Framer Motion |
 | **Data** | MongoDB Atlas · Prisma ORM |
-| **Auth** | jose (JWT) · bcryptjs · Google OAuth 2.0 |
+| **Auth** | jose (JWT) · bcryptjs |
 | **Viz** | Recharts · custom SVG org chart |
 
 ---
@@ -71,11 +71,6 @@ DATABASE_URL="mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/vk_staff?ret
 
 # Sign session JWTs — generate: openssl rand -base64 32
 JWT_SECRET="a-long-random-string"
-
-# Optional: Google sign-in (Cloud Console → Credentials → OAuth client,
-# redirect URI: http://localhost:3000/api/auth/google/callback)
-GOOGLE_CLIENT_ID=""
-GOOGLE_CLIENT_SECRET=""
 ```
 
 ### 3. Set up the database
@@ -145,7 +140,7 @@ scripts/seed.ts          # deterministic demo data
 - Sessions are signed JWTs in **httpOnly, SameSite cookies** (`Secure` in production)
 - **Brute-force protection** — per-IP and per-account login rate limits with `Retry-After`
 - **No user enumeration** — identical message *and timing* for unknown email vs wrong password
-- **CSRF** — SameSite cookies + Origin checks on all mutations; OAuth state cookie for Google
+- **CSRF** — SameSite cookies + Origin checks on all mutations
 - Security headers — CSP · `X-Frame-Options: DENY` · HSTS · `nosniff` · Permissions-Policy
 - RBAC enforced **server-side** on every query; Zod-validated inputs; Prisma-parameterized queries
 - Refuses to boot in production with the dev `JWT_SECRET`
