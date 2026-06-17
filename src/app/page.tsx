@@ -7,7 +7,7 @@ const FEATURES = [
   {
     icon: Network,
     title: "Hierarchy built in",
-    body: "Chairman to CPE — one org chart, clear reporting lines, instant transfers.",
+    body: "Owner to CPE — one org chart, clear reporting lines, instant transfers.",
   },
   {
     icon: BarChart3,
@@ -62,7 +62,7 @@ export default function LandingPage() {
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
             Manage employees, track every field visit and watch performance roll up the hierarchy —
-            from CPE to Chairman, in real time.
+            from CPE to Owner, in real time.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Button size="lg" asChild>

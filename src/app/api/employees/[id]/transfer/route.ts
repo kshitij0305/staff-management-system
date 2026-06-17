@@ -40,7 +40,7 @@ export async function POST(req: Request, { params }: Params) {
 
   const requiredManagerRole = MANAGER_ROLE[target.role];
   if (!requiredManagerRole) {
-    return NextResponse.json({ error: "The Chairman cannot be transferred" }, { status: 400 });
+    return NextResponse.json({ error: "The Owner cannot be transferred" }, { status: 400 });
   }
 
   const newManager = await prisma.user.findUnique({

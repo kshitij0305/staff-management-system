@@ -51,7 +51,7 @@ export default function LoginPage() {
             One portal for the whole hierarchy.
           </p>
           <p className="mt-2 text-sm leading-relaxed text-stone-400">
-            From the Chairman&apos;s overview to every prospect a CPE collects in the field —
+            From the Owner&apos;s overview to every prospect a CPE collects in the field —
             track performance, manage your team and grow together.
           </p>
         </div>

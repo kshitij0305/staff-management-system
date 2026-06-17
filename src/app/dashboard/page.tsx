@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   }
 
   const data = await getOverviewData(session);
-  const variant = session.role === "CHAIRMAN" || session.role === "NATIONAL_HEAD" ? "executive" : "manager";
+  const variant = session.role === "OWNER" || session.role === "NATIONAL_HEAD" ? "executive" : "manager";
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">

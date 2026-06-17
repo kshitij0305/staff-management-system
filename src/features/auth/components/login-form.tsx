@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const DEMO_ACCOUNTS = [
-  { label: "Chairman", email: "chairman@vkgroup.in" },
+  { label: "Owner", email: "owner@vkgroup.in" },
   { label: "ASM", email: "asm@vkgroup.in" },
   { label: "CPE", email: "cpe@vkgroup.in" },
 ];

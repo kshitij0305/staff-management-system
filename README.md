@@ -27,7 +27,7 @@ Five-level hierarchy · role-based dashboards · prospect tracking · interactiv
 ## ✨ Features
 
 - 🔐 **Authentication** — email + password, JWT (jose) in an httpOnly cookie, optional 30-day *remember me*. No public registration — accounts are created by managers.
-- 🏢 **5-level hierarchy** — `Chairman → National Head → CSM → ASM → CPE`, with who-can-create-whom rules enforced server-side.
+- 🏢 **5-level hierarchy** — `Owner → National Head → CSM → ASM → CPE`, with who-can-create-whom rules enforced server-side.
 - 🛡️ **RBAC scoping** — every query is filtered to the viewer's subtree via a **materialized ancestor path** (one indexed filter, no recursive traversal).
 - 👥 **Employee management** — create · edit · deactivate/reactivate · **transfer** (re-parents the entire sub-team atomically) · rich profile pages with stats.
 - 📋 **Prospect management** — field-visit records with a **last-3-days default view**, debounced search, status & employee filters, date-range presets, server pagination and **CSV export**.
@@ -93,7 +93,7 @@ Every seeded account uses the password `demo1234`:
 
 | Role | Email | Sees |
 | :-- | :-- | :-- |
-| Chairman | `chairman@vkgroup.in` | Whole company, all analytics |
+| Owner | `owner@vkgroup.in` | Whole company, all analytics |
 | National Head | `nationalhead@vkgroup.in` | Company-wide view |
 | CSM | `csm@vkgroup.in` | Their circle (ASMs + CPEs) |
 | ASM | `asm@vkgroup.in` | Their CPEs + team leaderboard |

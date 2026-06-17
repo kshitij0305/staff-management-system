@@ -99,6 +99,9 @@ async function main() {
   console.log("Clearing existing data…");
   await prisma.activityLog.deleteMany();
   await prisma.prospect.deleteMany();
+  // Break the self-referential manager links before deleting, so the
+  // "Hierarchy" relation guard doesn't block the bulk delete.
+  await prisma.user.updateMany({ data: { managerId: null } });
   await prisma.user.deleteMany();
 
   const passwordHash = await bcrypt.hash("demo1234", 10);
@@ -133,19 +136,28 @@ async function main() {
   }
 
   console.log("Creating hierarchy…");
-  const chairman = await createUser({
+  const owner = await createUser({
     name: "Vinod Khanna",
-    email: "chairman@vkgroup.in",
-    role: Role.CHAIRMAN,
+    email: "owner@vkgroup.in",
+    role: Role.OWNER,
     manager: null,
     joinedDaysAgo: 1500,
+    state: "Uttar Pradesh",
+  });
+  // Second co-founder — also a root owner with company-wide visibility.
+  const coOwner = await createUser({
+    name: "Arjun Khanna",
+    email: "owner2@vkgroup.in",
+    role: Role.OWNER,
+    manager: null,
+    joinedDaysAgo: 1490,
     state: "Uttar Pradesh",
   });
   const nationalHead = await createUser({
     name: "Rajesh Verma",
     email: "nationalhead@vkgroup.in",
     role: Role.NATIONAL_HEAD,
-    manager: chairman,
+    manager: owner,
     joinedDaysAgo: 1200,
     state: "Uttar Pradesh",
   });
@@ -242,9 +254,9 @@ async function main() {
   console.log(`Created ${prospectRows.length} prospects. Writing activity logs…`);
 
   const logs = [];
-  for (const u of [chairman, nationalHead, ...csms, ...asms, ...cpes]) {
+  for (const u of [owner, coOwner, nationalHead, ...csms, ...asms, ...cpes]) {
     logs.push({
-      actorId: u.managerId ?? chairman.id,
+      actorId: u.managerId ?? owner.id,
       action: "EMPLOYEE_CREATED",
       targetType: "USER",
       targetId: u.id,
@@ -272,7 +284,8 @@ async function main() {
 
   console.log("\nSeed complete ✔");
   console.log("Demo logins (password: demo1234):");
-  console.log("  chairman@vkgroup.in       — Chairman");
+  console.log("  owner@vkgroup.in          — Owner (co-founder)");
+  console.log("  owner2@vkgroup.in         — Owner (co-founder)");
   console.log("  nationalhead@vkgroup.in   — National Head");
   console.log("  csm@vkgroup.in            — CSM");
   console.log("  asm@vkgroup.in            — ASM");

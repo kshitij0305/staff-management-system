@@ -8,7 +8,7 @@ datasource db {
 }
 
 enum Role {
-  CHAIRMAN
+  OWNER
   NATIONAL_HEAD
   CSM
   ASM

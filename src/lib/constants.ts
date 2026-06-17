@@ -3,7 +3,7 @@ import { Role, ProspectStatus, EmployeeStatus } from "@prisma/client";
 export const APP_NAME = "VK Group Staff";
 
 export const ROLE_LABELS: Record<Role, string> = {
-  CHAIRMAN: "Chairman",
+  OWNER: "Owner",
   NATIONAL_HEAD: "National Head",
   CSM: "CSM",
   ASM: "ASM",
@@ -11,7 +11,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  CHAIRMAN: "Company leadership",
+  OWNER: "Company leadership",
   NATIONAL_HEAD: "National operations",
   CSM: "Circle Sales Manager",
   ASM: "Area Sales Manager",
@@ -20,7 +20,7 @@ export const ROLE_DESCRIPTIONS: Record<Role, string> = {
 
 /** Tailwind classes for role badges — [light, dark] handled via dark: variants. */
 export const ROLE_BADGE_CLASSES: Record<Role, string> = {
-  CHAIRMAN:
+  OWNER:
     "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300 border-violet-200 dark:border-violet-500/20",
   NATIONAL_HEAD:
     "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300 border-blue-200 dark:border-blue-500/20",
@@ -30,7 +30,7 @@ export const ROLE_BADGE_CLASSES: Record<Role, string> = {
 };
 
 export const ROLE_HEX: Record<Role, string> = {
-  CHAIRMAN: "#8b5cf6",
+  OWNER: "#8b5cf6",
   NATIONAL_HEAD: "#3b82f6",
   CSM: "#06b6d4",
   ASM: "#f59e0b",

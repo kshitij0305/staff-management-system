@@ -20,7 +20,7 @@ export function OverviewDashboard({
   variant,
 }: {
   data: OverviewData;
-  /** executive = Chairman / National Head · manager = CSM / ASM */
+  /** executive = Owner / National Head · manager = CSM / ASM */
   variant: "executive" | "manager";
 }) {
   const delta7 =

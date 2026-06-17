@@ -99,7 +99,7 @@ export async function POST(req: Request) {
   // Resolve the manager: explicit managerId, or the actor themselves when their role fits.
   const requiredManagerRole = MANAGER_ROLE[input.role];
   if (!requiredManagerRole) {
-    return NextResponse.json({ error: "Cannot create another Chairman" }, { status: 400 });
+    return NextResponse.json({ error: "Cannot create another Owner" }, { status: 400 });
   }
   let managerId = input.managerId;
   if (!managerId && session.role === requiredManagerRole) managerId = session.sub;

@@ -17,7 +17,7 @@ export interface NavItem {
   roles?: Role[];
 }
 
-const MANAGER_ROLES: Role[] = [Role.CHAIRMAN, Role.NATIONAL_HEAD, Role.CSM, Role.ASM];
+const MANAGER_ROLES: Role[] = [Role.OWNER, Role.NATIONAL_HEAD, Role.CSM, Role.ASM];
 
 export const NAV_ITEMS: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },

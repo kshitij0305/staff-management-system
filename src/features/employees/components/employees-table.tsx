@@ -283,7 +283,7 @@ export function EmployeesTable() {
                               >
                                 <UserPen className="size-4" /> Edit
                               </DropdownMenuItem>
-                              {emp.role !== "CHAIRMAN" && (
+                              {emp.role !== "OWNER" && (
                                 <DropdownMenuItem onClick={() => setTransferring(emp)}>
                                   <ArrowLeftRight className="size-4" /> Transfer
                                 </DropdownMenuItem>
