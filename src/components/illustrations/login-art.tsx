@@ -5,7 +5,7 @@ export function LoginArt({ className }: { className?: string }) {
       {/* sun + glow */}
       <circle cx="240" cy="98" r="64" fill="url(#la-sun)" opacity="0.25" />
       <circle cx="240" cy="98" r="34" fill="url(#la-sun)" />
-      <g stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" opacity="0.7">
+      <g stroke="#34d399" strokeWidth="3" strokeLinecap="round" opacity="0.7">
         <path d="M240 38v-14" />
         <path d="M296 56l10-10" />
         <path d="M184 56l-10-10" />
@@ -14,7 +14,7 @@ export function LoginArt({ className }: { className?: string }) {
       </g>
 
       {/* connector lines */}
-      <g stroke="#f59e0b" strokeWidth="2" opacity="0.5">
+      <g stroke="#10b981" strokeWidth="2" opacity="0.5">
         <path d="M240 140v36" />
         <path d="M240 176c-70 0-120 18-120 52" />
         <path d="M240 176c70 0 120 18 120 52" />
@@ -23,8 +23,8 @@ export function LoginArt({ className }: { className?: string }) {
 
       {/* root card */}
       <g>
-        <rect x="196" y="140" width="88" height="36" rx="10" fill="#1c1917" stroke="#f59e0b" strokeOpacity="0.6" />
-        <circle cx="216" cy="158" r="9" fill="#f59e0b" />
+        <rect x="196" y="140" width="88" height="36" rx="10" fill="#1c1917" stroke="#10b981" strokeOpacity="0.6" />
+        <circle cx="216" cy="158" r="9" fill="#10b981" />
         <rect x="232" y="150" width="40" height="5" rx="2.5" fill="#e7e5e4" opacity="0.9" />
         <rect x="232" y="161" width="28" height="5" rx="2.5" fill="#a8a29e" opacity="0.7" />
       </g>
@@ -63,16 +63,16 @@ export function LoginArt({ className }: { className?: string }) {
         strokeLinecap="round"
         fill="none"
       />
-      <circle cx="420" cy="282" r="5" fill="#f59e0b" />
+      <circle cx="420" cy="282" r="5" fill="#10b981" />
 
       <defs>
         <linearGradient id="la-sun" x1="206" y1="64" x2="274" y2="132" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fbbf24" />
-          <stop offset="1" stopColor="#ea580c" />
+          <stop stopColor="#34d399" />
+          <stop offset="1" stopColor="#059669" />
         </linearGradient>
         <linearGradient id="la-spark" x1="60" y1="330" x2="420" y2="282" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f59e0b" stopOpacity="0.2" />
-          <stop offset="1" stopColor="#f59e0b" />
+          <stop stopColor="#10b981" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#10b981" />
         </linearGradient>
       </defs>
     </svg>

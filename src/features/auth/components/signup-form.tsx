@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 
 export function SignupForm() {
   const router = useRouter();
-  const [form, setForm] = useState({ orgName: "", name: "", email: "", password: "" });
+  const [form, setForm] = useState({ orgName: "", name: "", email: "", password: "", confirm: "" });
   const [loading, setLoading] = useState(false);
 
   function set<K extends keyof typeof form>(k: K, v: string) {
@@ -22,6 +22,10 @@ export function SignupForm() {
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();
     if (loading) return;
+    if (form.password !== form.confirm) {
+      toast.error("Passwords don't match");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
@@ -48,7 +52,8 @@ export function SignupForm() {
     form.orgName.trim().length >= 2 &&
     form.name.trim().length >= 2 &&
     form.email.includes("@") &&
-    form.password.length >= 8;
+    form.password.length >= 8 &&
+    form.password === form.confirm;
 
   return (
     <motion.div
@@ -73,6 +78,13 @@ export function SignupForm() {
         <div className="space-y-2">
           <Label htmlFor="su-pass">Password</Label>
           <Input id="su-pass" type="password" autoComplete="new-password" value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="min 8 characters" required className="h-10" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="su-confirm">Confirm password</Label>
+          <Input id="su-confirm" type="password" autoComplete="new-password" value={form.confirm} onChange={(e) => set("confirm", e.target.value)} placeholder="re-enter password" required className="h-10" />
+          {form.confirm.length > 0 && form.confirm !== form.password && (
+            <p className="text-xs text-destructive">Passwords don&apos;t match</p>
+          )}
         </div>
         <Button type="submit" size="lg" className="w-full" disabled={!canSubmit || loading}>
           {loading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}

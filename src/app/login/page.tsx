@@ -30,12 +30,12 @@ export default function LoginPage() {
       </div>
 
       {/* Right: illustration panel */}
-      <div className="relative hidden overflow-hidden bg-stone-950 lg:flex lg:flex-col lg:items-center lg:justify-center">
+      <div className="relative hidden overflow-hidden bg-[#04140d] lg:flex lg:flex-col lg:items-center lg:justify-center">
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(60% 50% at 50% 20%, rgba(245,158,11,0.18) 0%, transparent 70%), radial-gradient(40% 40% at 80% 80%, rgba(234,88,12,0.10) 0%, transparent 70%)",
+              "radial-gradient(60% 50% at 50% 20%, rgba(16,185,129,0.20) 0%, transparent 70%), radial-gradient(40% 40% at 80% 80%, rgba(5,150,105,0.12) 0%, transparent 70%)",
           }}
         />
         <div

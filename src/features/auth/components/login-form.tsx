@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
@@ -109,6 +110,13 @@ export function LoginForm() {
           Sign in
         </Button>
       </form>
+
+      <p className="mt-5 text-center text-sm text-muted-foreground">
+        New here?{" "}
+        <Link href="/signup" className="font-medium text-foreground hover:text-primary">
+          Create a workspace
+        </Link>
+      </p>
 
       <div className="mt-8 rounded-xl border border-dashed bg-muted/40 p-4">
         <p className="text-xs font-medium text-muted-foreground">
