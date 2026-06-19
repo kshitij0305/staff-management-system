@@ -4,7 +4,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
-import { ROLE_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { LeaderRow } from "../data";
 
@@ -65,7 +64,7 @@ export function Leaderboard({ rows, linkable = true }: { rows: LeaderRow[]; link
             key={row.id}
             href={`/dashboard/employees/${row.id}`}
             className={cn(className, "hover:bg-muted")}
-            title={ROLE_LABELS[row.role]}
+            title={row.level.name}
           >
             {inner}
           </Link>

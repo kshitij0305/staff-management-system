@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Users, ContactRound, CalendarRange, Percent } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RoleBadge, EmployeeStatusBadge } from "@/components/badges";
+import { LevelBadge, EmployeeStatusBadge } from "@/components/badges";
 import { UserAvatar } from "@/components/user-avatar";
 import type { EmployeeStatus } from "@prisma/client";
 import type { OverviewData } from "../data";
@@ -78,18 +78,18 @@ export function OverviewDashboard({
           <>
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Top ASMs · 30 days</CardTitle>
+                <CardTitle className="text-sm">Top managers · 30 days</CardTitle>
               </CardHeader>
               <CardContent>
-                <Leaderboard rows={data.topAsms} />
+                <Leaderboard rows={data.topManagers} />
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Top CPEs · 30 days</CardTitle>
+                <CardTitle className="text-sm">Top performers · 30 days</CardTitle>
               </CardHeader>
               <CardContent>
-                <Leaderboard rows={data.topCpes} />
+                <Leaderboard rows={data.topCollectors} />
               </CardContent>
             </Card>
             <Card>
@@ -129,7 +129,7 @@ export function OverviewDashboard({
                           {m.interested30} interested
                         </div>
                       </div>
-                      <RoleBadge role={m.role} />
+                      <LevelBadge name={m.level.name} rank={m.level.rank} />
                       <EmployeeStatusBadge status={m.status as EmployeeStatus} />
                       <span className="w-12 text-right text-sm font-semibold tabular-nums">
                         {m.count30}
@@ -144,7 +144,7 @@ export function OverviewDashboard({
                 <CardTitle className="text-sm">Team leaderboard</CardTitle>
               </CardHeader>
               <CardContent>
-                <Leaderboard rows={data.topCpes.length > 0 ? data.topCpes : data.topAsms} />
+                <Leaderboard rows={data.topCollectors.length > 0 ? data.topCollectors : data.topManagers} />
               </CardContent>
             </Card>
           </>

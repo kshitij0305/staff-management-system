@@ -14,15 +14,13 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { UserAvatar } from "@/components/user-avatar";
-import { ROLE_LABELS } from "@/lib/constants";
-import type { Role } from "@prisma/client";
 import { useSession } from "./session-provider";
-import { navItemsFor } from "./nav";
+import { navItemsFor, isManager } from "./nav";
 
 interface PaletteEmployee {
   id: string;
   name: string;
-  role: Role;
+  level: { name: string };
   employeeId: string;
 }
 
@@ -49,12 +47,12 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
 
   // Lazy-load the (scoped) employee list the first time the palette opens
   useEffect(() => {
-    if (!open || employees !== null || session.role === "CPE") return;
+    if (!open || employees !== null || !isManager(session)) return;
     fetch("/api/employees?pageSize=200")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setEmployees(data?.employees ?? []))
       .catch(() => setEmployees([]));
-  }, [open, employees, session.role]);
+  }, [open, employees, session]);
 
   const run = useCallback((fn: () => void) => {
     setOpen(false);
@@ -69,7 +67,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Navigate">
-            {navItemsFor(session.role).map((item) => (
+            {navItemsFor(session).map((item) => (
               <CommandItem key={item.href} onSelect={() => run(() => router.push(item.href))}>
                 <item.icon className="size-4" />
                 {item.title}
@@ -83,13 +81,13 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                 {employees.map((e) => (
                   <CommandItem
                     key={e.id}
-                    value={`${e.name} ${e.employeeId} ${ROLE_LABELS[e.role]}`}
+                    value={`${e.name} ${e.employeeId} ${e.level.name}`}
                     onSelect={() => run(() => router.push(`/dashboard/employees/${e.id}`))}
                   >
                     <UserAvatar name={e.name} className="size-5" textClassName="text-[8px]" />
                     <span>{e.name}</span>
                     <span className="ml-auto text-xs text-muted-foreground">
-                      {ROLE_LABELS[e.role]}
+                      {e.level.name}
                     </span>
                   </CommandItem>
                 ))}

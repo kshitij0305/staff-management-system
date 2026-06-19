@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Logo, LogoMark } from "@/components/logo";
 import { UserAvatar } from "@/components/user-avatar";
-import { ROLE_LABELS } from "@/lib/constants";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSession } from "./session-provider";
 import { navItemsFor } from "./nav";
@@ -22,7 +21,7 @@ export function NavList({
 }) {
   const session = useSession();
   const pathname = usePathname();
-  const items = navItemsFor(session.role);
+  const items = navItemsFor(session);
 
   return (
     <nav className="flex flex-col gap-1 px-2">
@@ -104,7 +103,7 @@ export function Sidebar() {
             <div className="min-w-0 leading-tight">
               <div className="truncate text-sm font-medium">{session.name}</div>
               <div className="truncate text-xs text-muted-foreground">
-                {ROLE_LABELS[session.role]}
+                {session.levelName}
               </div>
             </div>
           )}

@@ -7,7 +7,7 @@ import { ChevronDown, Maximize, Minus, Plus, UnfoldVertical, FoldVertical } from
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/user-avatar";
-import { ROLE_LABELS, ROLE_HEX } from "@/lib/constants";
+import { levelHex } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { OrgUser } from "../types";
 import { buildForest, layoutForest, NODE_W, NODE_H } from "../layout";
@@ -40,6 +40,15 @@ export function OrgChart({ users, viewerId }: { users: OrgUser[]; viewerId: stri
     () => layoutForest(forest, collapsed),
     [forest, collapsed]
   );
+
+  // Unique levels present, most senior first — for the legend.
+  const legendLevels = useMemo(() => {
+    const byRank = new Map<number, string>();
+    for (const u of users) byRank.set(u.levelRank, u.levelName);
+    return [...byRank.entries()]
+      .map(([rank, name]) => ({ rank, name }))
+      .sort((a, b) => b.rank - a.rank);
+  }, [users]);
 
   const fit = useCallback(() => {
     const el = containerRef.current;
@@ -166,12 +175,12 @@ export function OrgChart({ users, viewerId }: { users: OrgUser[]; viewerId: stri
         ))}
       </div>
 
-      {/* legend */}
+      {/* legend — derived from the levels actually present, top first */}
       <div className="absolute bottom-3 left-3 z-10 flex flex-wrap gap-x-3 gap-y-1 rounded-lg border bg-card/90 px-3 py-2 shadow-sm backdrop-blur">
-        {Object.entries(ROLE_LABELS).map(([role, label]) => (
-          <span key={role} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="size-2 rounded-full" style={{ background: ROLE_HEX[role as keyof typeof ROLE_HEX] }} />
-            {label}
+        {legendLevels.map((lvl) => (
+          <span key={lvl.rank} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="size-2 rounded-full" style={{ background: levelHex(lvl.rank) }} />
+            {lvl.name}
           </span>
         ))}
       </div>
@@ -212,7 +221,7 @@ export function OrgChart({ users, viewerId }: { users: OrgUser[]; viewerId: stri
                     node.user.id === viewerId && "ring-2 ring-primary/50",
                     node.user.status === "INACTIVE" && "opacity-55"
                   )}
-                  style={{ borderTopColor: ROLE_HEX[node.user.role], borderTopWidth: 3 }}
+                  style={{ borderTopColor: levelHex(node.user.levelRank), borderTopWidth: 3 }}
                   onClick={() => {
                     if (!dragging) router.push(`/dashboard/employees/${node.user.id}`);
                   }}
@@ -221,8 +230,8 @@ export function OrgChart({ users, viewerId }: { users: OrgUser[]; viewerId: stri
                   <div className="min-w-0 flex-1 leading-tight">
                     <div className="truncate text-[13px] font-semibold">{node.user.name}</div>
                     <div className="truncate text-[11px] text-muted-foreground">
-                      {ROLE_LABELS[node.user.role]}
-                      {node.user.role === "CPE"
+                      {node.user.levelName}
+                      {node.user.levelRank === 1
                         ? ` · ${node.user.prospectCount} prospects`
                         : node.user.reportCount > 0
                           ? ` · team of ${node.user.reportCount}`

@@ -1,9 +1,10 @@
-import type { Role, EmployeeStatus } from "@prisma/client";
+import type { EmployeeStatus } from "@prisma/client";
 
 export interface OrgUser {
   id: string;
   name: string;
-  role: Role;
+  levelName: string;
+  levelRank: number;
   status: EmployeeStatus;
   managerId: string | null;
   prospectCount: number;

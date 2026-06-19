@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
 
   const employee = await prisma.user.findFirst({
-    // scopedUserWhere already includes the viewer themselves; `{}` for executives = see all.
+    // scopedUserWhere already includes the viewer themselves + the org filter.
     where: { AND: [{ id }, scopedUserWhere(session)] },
     select: {
       id: true,
@@ -23,15 +23,21 @@ export async function GET(_req: Request, { params }: Params) {
       name: true,
       email: true,
       phone: true,
-      role: true,
+      level: { select: { id: true, name: true, rank: true, seesAll: true } },
       status: true,
       joiningDate: true,
       city: true,
       state: true,
       ancestorIds: true,
-      manager: { select: { id: true, name: true, role: true } },
+      manager: { select: { id: true, name: true, level: { select: { name: true } } } },
       reports: {
-        select: { id: true, name: true, role: true, status: true, _count: { select: { prospects: true } } },
+        select: {
+          id: true,
+          name: true,
+          level: { select: { name: true, rank: true } },
+          status: true,
+          _count: { select: { prospects: true } },
+        },
         orderBy: { name: "asc" },
       },
       _count: { select: { reports: true, prospects: true } },
@@ -46,9 +52,9 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
 
-  const target = await prisma.user.findUnique({
-    where: { id },
-    select: { id: true, name: true, role: true, status: true, ancestorIds: true },
+  const target = await prisma.user.findFirst({
+    where: { id, organizationId: session.orgId },
+    select: { id: true, name: true, status: true, ancestorIds: true },
   });
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageUser(session, target)) {
@@ -77,11 +83,12 @@ export async function PATCH(req: Request, { params }: Params) {
     const updated = await prisma.user.update({
       where: { id },
       data,
-      select: { id: true, name: true, status: true, role: true },
+      select: { id: true, name: true, status: true },
     });
 
     const statusChanged = input.status && input.status !== target.status;
     await logActivity({
+      organizationId: session.orgId,
       actorId: session.sub,
       action: statusChanged
         ? input.status === "INACTIVE"

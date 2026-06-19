@@ -12,8 +12,8 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
 
-  const prospect = await prisma.prospect.findUnique({
-    where: { id },
+  const prospect = await prisma.prospect.findFirst({
+    where: { id, organizationId: session.orgId },
     select: {
       id: true,
       customerName: true,
@@ -25,7 +25,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   // Editable by the collector or anyone above them in the chain.
   const allowed =
-    seesEverything(session.role) ||
+    seesEverything(session) ||
     prospect.collectedById === session.sub ||
     prospect.collectedBy.ancestorIds.includes(session.sub);
   if (!allowed) {
@@ -57,6 +57,7 @@ export async function PATCH(req: Request, { params }: Params) {
   });
 
   await logActivity({
+    organizationId: session.orgId,
     actorId: session.sub,
     action: "PROSPECT_UPDATED",
     targetType: "PROSPECT",

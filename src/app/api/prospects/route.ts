@@ -55,6 +55,7 @@ export async function POST(req: Request) {
 
   const prospect = await prisma.prospect.create({
     data: {
+      organizationId: session.orgId,
       customerName: input.customerName,
       phone: input.phone,
       address: input.address,
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
   });
 
   await logActivity({
+    organizationId: session.orgId,
     actorId: session.sub,
     action: "PROSPECT_ADDED",
     targetType: "PROSPECT",

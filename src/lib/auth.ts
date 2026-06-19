@@ -1,6 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import type { Role } from "@prisma/client";
 
 export const SESSION_COOKIE = "vk_session";
 const SESSION_DAYS = 7;
@@ -8,9 +7,11 @@ export const REMEMBER_DAYS = 30;
 
 export interface SessionPayload {
   sub: string; // user id
-  role: Role;
   name: string;
   employeeId: string;
+  orgId: string; // tenant — every scoped query filters by this
+  levelRank: number; // position in the org's hierarchy (higher = more senior)
+  seesAll: boolean; // top level → company-wide visibility
 }
 
 function secretKey() {
@@ -29,7 +30,13 @@ export async function signSession(
   payload: SessionPayload,
   days: number = SESSION_DAYS
 ): Promise<string> {
-  return new SignJWT({ role: payload.role, name: payload.name, employeeId: payload.employeeId })
+  return new SignJWT({
+    name: payload.name,
+    employeeId: payload.employeeId,
+    orgId: payload.orgId,
+    levelRank: payload.levelRank,
+    seesAll: payload.seesAll,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
@@ -40,12 +47,14 @@ export async function signSession(
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secretKey());
-    if (!payload.sub) return null;
+    if (!payload.sub || !payload.orgId) return null;
     return {
       sub: payload.sub,
-      role: payload.role as Role,
       name: payload.name as string,
       employeeId: payload.employeeId as string,
+      orgId: payload.orgId as string,
+      levelRank: payload.levelRank as number,
+      seesAll: payload.seesAll as boolean,
     };
   } catch {
     return null;

@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   const emailCheck = rateLimit(`login:email:${email}`, EMAIL_LIMIT, WINDOW_MS);
   if (!emailCheck.ok) return tooMany(emailCheck.retryAfterSec);
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, include: { level: true } });
 
   // Same error and same bcrypt cost for unknown email / wrong password —
   // don't leak which one failed, by message or by timing.
@@ -72,12 +72,20 @@ export async function POST(req: Request) {
 
   const days = remember ? REMEMBER_DAYS : undefined;
   const token = await signSession(
-    { sub: user.id, role: user.role, name: user.name, employeeId: user.employeeId },
+    {
+      sub: user.id,
+      name: user.name,
+      employeeId: user.employeeId,
+      orgId: user.organizationId,
+      levelRank: user.level.rank,
+      seesAll: user.level.seesAll,
+    },
     days
   );
   await setSessionCookie(token, days);
 
   await logActivity({
+    organizationId: user.organizationId,
     actorId: user.id,
     action: "USER_LOGIN",
     targetType: "AUTH",
@@ -85,6 +93,6 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({
-    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    user: { id: user.id, name: user.name, email: user.email, level: user.level.name },
   });
 }

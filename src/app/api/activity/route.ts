@@ -44,7 +44,7 @@ export async function GET(req: Request) {
         action: true,
         summary: true,
         createdAt: true,
-        actor: { select: { id: true, name: true, role: true } },
+        actor: { select: { id: true, name: true, level: { select: { name: true, rank: true } } } },
       },
     }),
   ]);

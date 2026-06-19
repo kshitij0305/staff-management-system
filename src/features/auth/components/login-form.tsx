@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const DEMO_ACCOUNTS = [
-  { label: "Owner", email: "owner@vkgroup.in" },
-  { label: "ASM", email: "asm@vkgroup.in" },
-  { label: "CPE", email: "cpe@vkgroup.in" },
+  { label: "VK · Owner", email: "owner@vkgroup.in" },
+  { label: "VK · CPE", email: "cpe@vkgroup.in" },
+  { label: "Acme · Director", email: "director@acme.in" },
+  { label: "Acme · Agent", email: "agent@acme.in" },
 ];
 
 export function LoginForm() {

@@ -6,11 +6,10 @@ import { motion } from "framer-motion";
 import { format, formatDistanceToNow, isToday, isYesterday, startOfDay } from "date-fns";
 import { toast } from "sonner";
 import { Activity as ActivityIcon, Loader2 } from "lucide-react";
-import type { Role } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
-import { RoleBadge } from "@/components/badges";
+import { LevelBadge } from "@/components/badges";
 import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -19,7 +18,7 @@ interface LogRow {
   action: string;
   summary: string;
   createdAt: string;
-  actor: { id: string; name: string; role: Role };
+  actor: { id: string; name: string; level: { name: string; rank: number } };
 }
 
 const PAGE_SIZE = 25;
@@ -154,7 +153,11 @@ export function ActivityList() {
                       </Link>{" "}
                       <span className="text-muted-foreground">{log.summary}</span>
                     </p>
-                    <RoleBadge role={log.actor.role} className="hidden sm:inline-flex" />
+                    <LevelBadge
+                      name={log.actor.level.name}
+                      rank={log.actor.level.rank}
+                      className="hidden sm:inline-flex"
+                    />
                     <span className="shrink-0 text-[11px] text-muted-foreground">
                       {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
                     </span>

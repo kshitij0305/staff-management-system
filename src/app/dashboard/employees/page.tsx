@@ -8,8 +8,8 @@ export const metadata: Metadata = { title: "Employees" };
 export default async function EmployeesPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  // CPEs have no team to manage
-  if (session.role === "CPE") redirect("/dashboard");
+  // Leaf-level users (manage nobody) have no team to manage.
+  if (!session.seesAll && session.levelRank <= 1) redirect("/dashboard");
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">

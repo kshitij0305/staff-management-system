@@ -10,14 +10,14 @@ export const metadata: Metadata = { title: "Hierarchy" };
 export default async function HierarchyPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.role === "CPE") redirect("/dashboard");
+  if (!session.seesAll && session.levelRank <= 1) redirect("/dashboard");
 
   const users = await prisma.user.findMany({
     where: scopedUserWhere(session),
     select: {
       id: true,
       name: true,
-      role: true,
+      level: { select: { name: true, rank: true } },
       status: true,
       managerId: true,
       _count: { select: { prospects: true, reports: true } },
@@ -28,9 +28,10 @@ export default async function HierarchyPage() {
   const orgUsers = users.map((u) => ({
     id: u.id,
     name: u.name,
-    role: u.role,
+    levelName: u.level.name,
+    levelRank: u.level.rank,
     status: u.status,
-    // Treat managers outside the visible scope as roots (e.g. an ASM viewing their own subtree)
+    // Treat managers outside the visible scope as roots (e.g. a manager viewing their own subtree)
     managerId: u.managerId && inScope.has(u.managerId) ? u.managerId : null,
     prospectCount: u._count.prospects,
     reportCount: u._count.reports,

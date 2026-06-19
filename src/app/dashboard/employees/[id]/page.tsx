@@ -5,10 +5,9 @@ import { Mail, Phone, MapPin, CalendarDays, ArrowLeft, Users, ContactRound } fro
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { scopedUserWhere, canManageUser } from "@/lib/rbac";
-import { ROLE_LABELS } from "@/lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RoleBadge, EmployeeStatusBadge, ProspectStatusBadge } from "@/components/badges";
+import { LevelBadge, EmployeeStatusBadge, ProspectStatusBadge } from "@/components/badges";
 import { UserAvatar } from "@/components/user-avatar";
 import { Sparkline } from "@/components/charts/sparkline";
 import { EmptyState } from "@/components/empty-state";
@@ -32,18 +31,18 @@ export default async function EmployeeProfilePage({
       name: true,
       email: true,
       phone: true,
-      role: true,
+      level: { select: { id: true, name: true, rank: true, seesAll: true } },
       status: true,
       joiningDate: true,
       city: true,
       state: true,
       ancestorIds: true,
-      manager: { select: { id: true, name: true, role: true } },
+      manager: { select: { id: true, name: true, level: { select: { name: true } } } },
       reports: {
         select: {
           id: true,
           name: true,
-          role: true,
+          level: { select: { name: true, rank: true } },
           status: true,
           _count: { select: { prospects: true } },
         },
@@ -55,11 +54,10 @@ export default async function EmployeeProfilePage({
 
   const canManage = canManageUser(session, {
     id: employee.id,
-    role: employee.role,
     ancestorIds: employee.ancestorIds,
   });
 
-  const isCPE = employee.role === "CPE";
+  const isCPE = employee.level.rank === 1 && !employee.level.seesAll;
   // Prospects collected by this person, or — for managers — by anyone in their subtree.
   const prospectScope = isCPE
     ? { collectedById: employee.id }
@@ -143,7 +141,7 @@ export default async function EmployeeProfilePage({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-semibold tracking-tight">{employee.name}</h2>
-              <RoleBadge role={employee.role} />
+              <LevelBadge name={employee.level.name} rank={employee.level.rank} />
               <EmployeeStatusBadge status={employee.status} />
             </div>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
@@ -174,7 +172,7 @@ export default async function EmployeeProfilePage({
                   name: employee.name,
                   email: employee.email,
                   phone: employee.phone,
-                  role: employee.role,
+                  level: employee.level,
                   status: employee.status,
                   joiningDate: employee.joiningDate.toISOString(),
                   city: employee.city,
@@ -196,7 +194,7 @@ export default async function EmployeeProfilePage({
                 >
                   {employee.manager.name}
                 </Link>{" "}
-                ({ROLE_LABELS[employee.manager.role]})
+                ({employee.manager.level.name})
               </div>
             )}
           </div>
@@ -253,7 +251,7 @@ export default async function EmployeeProfilePage({
                     <UserAvatar name={r.name} />
                     <div className="min-w-0 flex-1 leading-tight">
                       <div className="truncate text-sm font-medium">{r.name}</div>
-                      <div className="text-xs text-muted-foreground">{ROLE_LABELS[r.role]}</div>
+                      <div className="text-xs text-muted-foreground">{r.level.name}</div>
                     </div>
                     <span className="text-xs text-muted-foreground tabular-nums">
                       {r._count.prospects} prospects

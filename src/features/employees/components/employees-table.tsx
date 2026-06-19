@@ -16,7 +16,7 @@ import {
   Eye,
   Users,
 } from "lucide-react";
-import { Role, EmployeeStatus } from "@prisma/client";
+import { EmployeeStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -51,16 +51,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RoleBadge, EmployeeStatusBadge } from "@/components/badges";
+import { LevelBadge, EmployeeStatusBadge } from "@/components/badges";
 import { UserAvatar } from "@/components/user-avatar";
 import { EmptyState } from "@/components/empty-state";
 import { TableSkeleton } from "@/components/skeletons";
 import { TablePagination } from "@/components/table-pagination";
 import { useDebouncedValue } from "@/hooks/use-debounced";
 import { useSession } from "@/components/shell/session-provider";
-import { CREATABLE_ROLES } from "@/lib/rbac";
-import { ROLE_LABELS } from "@/lib/constants";
-import type { EmployeeRow } from "../types";
+import { isManager } from "@/components/shell/nav";
+import type { EmployeeRow, LevelLite } from "../types";
 import { EmployeeFormDialog } from "./employee-form-dialog";
 import { TransferDialog } from "./transfer-dialog";
 
@@ -69,14 +68,15 @@ const PAGE_SIZE = 15;
 export function EmployeesTable() {
   const session = useSession();
   const router = useRouter();
-  const canAdd = CREATABLE_ROLES[session.role].length > 0;
+  const canAdd = isManager(session);
 
   const [q, setQ] = useState("");
   const debouncedQ = useDebouncedValue(q);
-  const [role, setRole] = useState<string>("ALL");
+  const [levelId, setLevelId] = useState<string>("ALL");
   const [status, setStatus] = useState<string>("ALL");
   const [page, setPage] = useState(1);
 
+  const [levels, setLevels] = useState<LevelLite[]>([]);
   const [rows, setRows] = useState<EmployeeRow[] | null>(null);
   const [total, setTotal] = useState(0);
   const [version, setVersion] = useState(0);
@@ -87,12 +87,19 @@ export function EmployeesTable() {
   const [transferring, setTransferring] = useState<EmployeeRow | null>(null);
   const [statusTarget, setStatusTarget] = useState<EmployeeRow | null>(null);
 
-  useEffect(() => setPage(1), [debouncedQ, role, status]);
+  useEffect(() => {
+    fetch("/api/levels")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setLevels(data?.levels ?? []))
+      .catch(() => setLevels([]));
+  }, []);
+
+  useEffect(() => setPage(1), [debouncedQ, levelId, status]);
 
   useEffect(() => {
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (debouncedQ) params.set("q", debouncedQ);
-    if (role !== "ALL") params.set("role", role);
+    if (levelId !== "ALL") params.set("levelId", levelId);
     if (status !== "ALL") params.set("status", status);
 
     let cancelled = false;
@@ -113,7 +120,7 @@ export function EmployeesTable() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedQ, role, status, page, version]);
+  }, [debouncedQ, levelId, status, page, version]);
 
   async function toggleStatus(emp: EmployeeRow) {
     const next: EmployeeStatus = emp.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
@@ -131,7 +138,7 @@ export function EmployeesTable() {
     refresh();
   }
 
-  const isFiltered = debouncedQ !== "" || role !== "ALL" || status !== "ALL";
+  const isFiltered = debouncedQ !== "" || levelId !== "ALL" || status !== "ALL";
 
   return (
     <div className="space-y-4">
@@ -146,15 +153,15 @@ export function EmployeesTable() {
             className="pl-8"
           />
         </div>
-        <Select value={role} onValueChange={setRole}>
-          <SelectTrigger className="w-36">
+        <Select value={levelId} onValueChange={setLevelId}>
+          <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All roles</SelectItem>
-            {Object.values(Role).map((r) => (
-              <SelectItem key={r} value={r}>
-                {ROLE_LABELS[r]}
+            <SelectItem value="ALL">All levels</SelectItem>
+            {levels.map((l) => (
+              <SelectItem key={l.id} value={l.id}>
+                {l.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -212,7 +219,7 @@ export function EmployeesTable() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Employee</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Level</TableHead>
                   <TableHead className="hidden md:table-cell">Manager</TableHead>
                   <TableHead className="hidden text-right lg:table-cell">Team</TableHead>
                   <TableHead className="hidden text-right sm:table-cell">Prospects</TableHead>
@@ -243,7 +250,7 @@ export function EmployeesTable() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <RoleBadge role={emp.role} />
+                      <LevelBadge name={emp.level.name} rank={emp.level.rank} />
                     </TableCell>
                     <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                       {emp.manager?.name ?? "—"}
@@ -283,7 +290,7 @@ export function EmployeesTable() {
                               >
                                 <UserPen className="size-4" /> Edit
                               </DropdownMenuItem>
-                              {emp.role !== "OWNER" && (
+                              {!emp.level.seesAll && (
                                 <DropdownMenuItem onClick={() => setTransferring(emp)}>
                                   <ArrowLeftRight className="size-4" /> Transfer
                                 </DropdownMenuItem>

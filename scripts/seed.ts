@@ -1,9 +1,11 @@
 /**
  * Demo data seed — run with `npm run db:seed`.
- * Deterministic (fixed PRNG seed) so re-runs produce the same company.
- * Wipes existing data first.
+ * Seeds TWO tenants to prove isolation + configurable hierarchies:
+ *   • "VK Group Solar"  — 5 levels (Owner → National Head → CSM → ASM → CPE)
+ *   • "Acme Realty"     — 3 levels (Director → Manager → Agent)
+ * Deterministic (fixed PRNG seed). Wipes existing data first.
  */
-import { PrismaClient, Role, ProspectStatus } from "@prisma/client";
+import { PrismaClient, ProspectStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -20,7 +22,6 @@ function rand(): number {
 const pick = <T,>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
 const randInt = (min: number, max: number) => min + Math.floor(rand() * (max - min + 1));
 
-// ---------- name + place pools ----------
 const FIRST = [
   "Aarav", "Vivaan", "Aditya", "Arjun", "Sai", "Reyansh", "Krishna", "Ishaan", "Rohan", "Kabir",
   "Ananya", "Diya", "Aadhya", "Kavya", "Ishita", "Priya", "Sneha", "Pooja", "Neha", "Riya",
@@ -33,61 +34,32 @@ const LAST = [
 ];
 const PLACES: Record<string, string[]> = {
   "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra", "Meerut"],
-  "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik"],
-  "Rajasthan": ["Jaipur", "Jodhpur", "Udaipur", "Kota"],
-  "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot"],
-  "Madhya Pradesh": ["Bhopal", "Indore", "Gwalior", "Jabalpur"],
-  "Haryana": ["Gurugram", "Faridabad", "Panipat", "Karnal"],
+  Maharashtra: ["Mumbai", "Pune", "Nagpur", "Nashik"],
+  Rajasthan: ["Jaipur", "Jodhpur", "Udaipur", "Kota"],
+  Gujarat: ["Ahmedabad", "Surat", "Vadodara", "Rajkot"],
 };
 const STATES = Object.keys(PLACES);
-const STREETS = ["MG Road", "Station Road", "Gandhi Nagar", "Civil Lines", "Sector 12", "Nehru Colony", "Shastri Marg", "Patel Chowk"];
-const REMARKS_INTERESTED = [
-  "Wants rooftop quote for 3kW system",
-  "Asked for EMI options, very keen",
-  "Site visit scheduled, roof looks suitable",
-  "Comparing with one other vendor, leaning towards us",
-  "Ready to book after subsidy explanation",
-];
-const REMARKS_NOT = [
-  "Renting the property, owner not interested",
-  "Budget constraints this year",
-  "Already installed solar last year",
-  "Roof shading issue, not feasible",
-];
-const REMARKS_FOLLOW = [
-  "Asked to call back next week",
-  "Wants to discuss with family first",
-  "Needs electricity bill analysis before deciding",
-  "Interested but traveling, follow up after 10 days",
-];
+const STREETS = ["MG Road", "Station Road", "Gandhi Nagar", "Civil Lines", "Sector 12", "Nehru Colony"];
+const REMARKS_INTERESTED = ["Wants a quote, very keen", "Ready to book", "Site visit scheduled"];
+const REMARKS_NOT = ["Budget constraints", "Not interested right now", "Already has a provider"];
+const REMARKS_FOLLOW = ["Call back next week", "Discussing with family", "Needs more info"];
 
-const usedNames = new Set<string>();
+const used = new Set<string>();
 function uniqueName(): string {
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 300; i++) {
     const n = `${pick(FIRST)} ${pick(LAST)}`;
-    if (!usedNames.has(n)) {
-      usedNames.add(n);
+    if (!used.has(n)) {
+      used.add(n);
       return n;
     }
   }
-  const n = `${pick(FIRST)} ${pick(LAST)} ${usedNames.size}`;
-  usedNames.add(n);
+  const n = `${pick(FIRST)} ${pick(LAST)} ${used.size}`;
+  used.add(n);
   return n;
-}
-
-function emailFor(name: string): string {
-  return `${name.toLowerCase().replace(/[^a-z]+/g, ".")}@vkgroup.in`;
 }
 function phone(): string {
   return `9${String(randInt(100000000, 999999999))}`;
 }
-
-let employeeCounter = 0;
-function nextEmployeeId(): string {
-  employeeCounter += 1;
-  return `VK-${String(employeeCounter).padStart(4, "0")}`;
-}
-
 function daysAgo(days: number, hour = 10): Date {
   const d = new Date();
   d.setDate(d.getDate() - days);
@@ -95,148 +67,98 @@ function daysAgo(days: number, hour = 10): Date {
   return d;
 }
 
-async function main() {
-  console.log("Clearing existing data…");
-  await prisma.activityLog.deleteMany();
-  await prisma.prospect.deleteMany();
-  // Break the self-referential manager links before deleting, so the
-  // "Hierarchy" relation guard doesn't block the bulk delete.
-  await prisma.user.updateMany({ data: { managerId: null } });
-  await prisma.user.deleteMany();
+let employeeCounter = 0;
+function nextEmployeeId(): string {
+  employeeCounter += 1;
+  return `EMP-${String(employeeCounter).padStart(4, "0")}`;
+}
 
-  const passwordHash = await bcrypt.hash("demo1234", 10);
+interface LevelSpec {
+  name: string;
+  count: number; // how many users at this level
+  email?: string; // demo login for the first user at this level
+}
 
-  interface CreateArgs {
-    name: string;
-    email?: string;
-    role: Role;
-    manager?: { id: string; ancestorIds: string[] } | null;
-    joinedDaysAgo: number;
-    state?: string;
-  }
-  async function createUser(args: CreateArgs) {
-    const state = args.state ?? pick(STATES);
-    const user = await prisma.user.create({
-      data: {
-        employeeId: nextEmployeeId(),
-        name: args.name,
-        email: args.email ?? emailFor(args.name),
-        phone: phone(),
-        passwordHash,
-        role: args.role,
-        managerId: args.manager?.id ?? null,
-        ancestorIds: args.manager ? [...args.manager.ancestorIds, args.manager.id] : [],
-        joiningDate: daysAgo(args.joinedDaysAgo),
-        city: pick(PLACES[state]),
-        state,
-        avatarSeed: args.name,
-      },
-    });
-    return user;
-  }
+/** Build one tenant: levels top→bottom, users distributed under the level above. */
+async function buildOrg(args: {
+  name: string;
+  slug: string;
+  state: string;
+  levels: LevelSpec[]; // index 0 = top (seesAll)
+  passwordHash: string;
+}) {
+  const { name, slug, state, levels: specs, passwordHash } = args;
+  const n = specs.length;
 
-  console.log("Creating hierarchy…");
-  const owner = await createUser({
-    name: "Vinod Khanna",
-    email: "owner@vkgroup.in",
-    role: Role.OWNER,
-    manager: null,
-    joinedDaysAgo: 1500,
-    state: "Uttar Pradesh",
-  });
-  // Second co-founder — also a root owner with company-wide visibility.
-  const coOwner = await createUser({
-    name: "Arjun Khanna",
-    email: "owner2@vkgroup.in",
-    role: Role.OWNER,
-    manager: null,
-    joinedDaysAgo: 1490,
-    state: "Uttar Pradesh",
-  });
-  const nationalHead = await createUser({
-    name: "Rajesh Verma",
-    email: "nationalhead@vkgroup.in",
-    role: Role.NATIONAL_HEAD,
-    manager: owner,
-    joinedDaysAgo: 1200,
-    state: "Uttar Pradesh",
+  const org = await prisma.organization.create({
+    data: { name, slug, onboarded: true },
   });
 
-  const csms = [];
-  for (let i = 0; i < 3; i++) {
-    csms.push(
-      await createUser({
-        name: uniqueName(),
-        email: i === 0 ? "csm@vkgroup.in" : undefined,
-        role: Role.CSM,
-        manager: nationalHead,
-        joinedDaysAgo: randInt(600, 1000),
-        state: STATES[i * 2],
+  // Levels: top = rank n (seesAll) … leaf = rank 1.
+  const levelByIndex = await Promise.all(
+    specs.map((s, i) =>
+      prisma.level.create({
+        data: { orgId: org.id, name: s.name, rank: n - i, seesAll: i === 0 },
       })
-    );
-  }
+    )
+  );
 
-  const asms = [];
-  for (const csm of csms) {
-    for (let i = 0; i < 3; i++) {
-      asms.push(
-        await createUser({
+  // Create users level by level, round-robin under the previous level.
+  let prevLevelUsers: { id: string; ancestorIds: string[] }[] = [];
+  let leafUsers: { id: string; city: string; state: string }[] = [];
+
+  for (let i = 0; i < n; i++) {
+    const spec = specs[i];
+    const level = levelByIndex[i];
+    const created: { id: string; ancestorIds: string[] }[] = [];
+
+    for (let k = 0; k < spec.count; k++) {
+      const manager = i === 0 ? null : prevLevelUsers[k % prevLevelUsers.length];
+      const ancestorIds = manager ? [...manager.ancestorIds, manager.id] : [];
+      const city = pick(PLACES[state]);
+      const u = await prisma.user.create({
+        data: {
+          organizationId: org.id,
+          levelId: level.id,
+          employeeId: nextEmployeeId(),
           name: uniqueName(),
-          email: asms.length === 0 ? "asm@vkgroup.in" : undefined,
-          role: Role.ASM,
-          manager: csm,
-          joinedDaysAgo: randInt(300, 600),
-          state: csm.state ?? undefined,
-        })
-      );
+          email: k === 0 && spec.email ? spec.email : `${slug}.${nextEmployeeId().toLowerCase()}@example.com`,
+          phone: phone(),
+          passwordHash,
+          managerId: manager?.id ?? null,
+          ancestorIds,
+          joiningDate: daysAgo(randInt(30, 1200)),
+          city,
+          state,
+          avatarSeed: slug + k,
+        },
+        select: { id: true, ancestorIds: true },
+      });
+      created.push(u);
+      if (i === n - 1) leafUsers.push({ id: u.id, city, state });
     }
+    prevLevelUsers = created;
   }
 
-  const cpes = [];
-  for (const asm of asms) {
-    const count = randInt(3, 4);
-    for (let i = 0; i < count; i++) {
-      cpes.push(
-        await createUser({
-          name: uniqueName(),
-          email: cpes.length === 0 ? "cpe@vkgroup.in" : undefined,
-          role: Role.CPE,
-          manager: asm,
-          joinedDaysAgo: randInt(30, 300),
-          state: asm.state ?? undefined,
-        })
-      );
-    }
-  }
-
-  // A couple of inactive employees for realism
-  await prisma.user.update({ where: { id: cpes[cpes.length - 1].id }, data: { status: "INACTIVE" } });
-  await prisma.user.update({ where: { id: cpes[cpes.length - 7].id }, data: { status: "INACTIVE" } });
-
-  console.log(`Created ${employeeCounter} employees. Creating prospects…`);
-
+  // Prospects for leaf users (weighted toward the last 3 days).
   const statusWeighted: ProspectStatus[] = [
     ...Array(40).fill(ProspectStatus.INTERESTED),
     ...Array(26).fill(ProspectStatus.NOT_INTERESTED),
     ...Array(34).fill(ProspectStatus.FOLLOW_UP),
   ];
-
   const prospectRows = [];
-  for (const cpe of cpes) {
-    // Per-CPE skill level → between ~8 and ~35 prospects over 60 days
-    const total = randInt(8, 35);
-    for (let i = 0; i < total; i++) {
-      // Weight towards recent days so "last 3 days" defaults show data
+  for (const leaf of leafUsers) {
+    const count = randInt(6, 24);
+    for (let i = 0; i < count; i++) {
       const day = rand() < 0.35 ? randInt(0, 3) : randInt(0, 60);
       const status = pick(statusWeighted);
-      const customer = uniqueName();
-      const state = cpe.state ?? pick(STATES);
       prospectRows.push({
-        customerName: customer,
+        organizationId: org.id,
+        customerName: uniqueName(),
         phone: phone(),
         address: `${randInt(1, 220)}, ${pick(STREETS)}`,
-        city: cpe.city ?? pick(PLACES[state]),
-        state,
+        city: leaf.city,
+        state: leaf.state,
         visitDate: daysAgo(day, randInt(9, 18)),
         status,
         remarks:
@@ -245,51 +167,60 @@ async function main() {
             : status === ProspectStatus.NOT_INTERESTED
               ? pick(REMARKS_NOT)
               : pick(REMARKS_FOLLOW),
-        collectedById: cpe.id,
+        collectedById: leaf.id,
         createdAt: daysAgo(day, 19),
       });
     }
   }
   await prisma.prospect.createMany({ data: prospectRows });
-  console.log(`Created ${prospectRows.length} prospects. Writing activity logs…`);
 
-  const logs = [];
-  for (const u of [owner, coOwner, nationalHead, ...csms, ...asms, ...cpes]) {
-    logs.push({
-      actorId: u.managerId ?? owner.id,
-      action: "EMPLOYEE_CREATED",
-      targetType: "USER",
-      targetId: u.id,
-      summary: `added ${u.name} as ${u.role.replace("_", " ").toLowerCase()}`,
-      createdAt: u.joiningDate,
-    });
-  }
-  // Recent prospect activity (latest 120)
-  const recent = await prisma.prospect.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 120,
-    include: { collectedBy: { select: { id: true, name: true } } },
+  return { org, employees: employeeCounter, prospects: prospectRows.length };
+}
+
+async function main() {
+  console.log("Clearing existing data…");
+  await prisma.activityLog.deleteMany();
+  await prisma.prospect.deleteMany();
+  await prisma.user.updateMany({ data: { managerId: null } });
+  await prisma.user.deleteMany();
+  await prisma.level.deleteMany();
+  await prisma.organization.deleteMany();
+
+  const passwordHash = await bcrypt.hash("demo1234", 10);
+
+  console.log("Seeding tenant: VK Group Solar (5 levels)…");
+  const vk = await buildOrg({
+    name: "VK Group Solar",
+    slug: "vk-group-solar",
+    state: "Uttar Pradesh",
+    passwordHash,
+    levels: [
+      { name: "Owner", count: 1, email: "owner@vkgroup.in" },
+      { name: "National Head", count: 1, email: "nationalhead@vkgroup.in" },
+      { name: "CSM", count: 3, email: "csm@vkgroup.in" },
+      { name: "ASM", count: 9, email: "asm@vkgroup.in" },
+      { name: "CPE", count: 30, email: "cpe@vkgroup.in" },
+    ],
   });
-  for (const p of recent) {
-    logs.push({
-      actorId: p.collectedBy.id,
-      action: "PROSPECT_ADDED",
-      targetType: "PROSPECT",
-      targetId: p.id,
-      summary: `added prospect ${p.customerName} (${p.city})`,
-      createdAt: p.createdAt,
-    });
-  }
-  await prisma.activityLog.createMany({ data: logs });
+
+  console.log("Seeding tenant: Acme Realty (3 levels)…");
+  const acme = await buildOrg({
+    name: "Acme Realty",
+    slug: "acme-realty",
+    state: "Maharashtra",
+    passwordHash,
+    levels: [
+      { name: "Director", count: 1, email: "director@acme.in" },
+      { name: "Manager", count: 3, email: "manager@acme.in" },
+      { name: "Agent", count: 9, email: "agent@acme.in" },
+    ],
+  });
 
   console.log("\nSeed complete ✔");
+  console.log(`VK Group Solar: prospects=${vk.prospects} · Acme Realty: prospects=${acme.prospects}`);
   console.log("Demo logins (password: demo1234):");
-  console.log("  owner@vkgroup.in          — Owner (co-founder)");
-  console.log("  owner2@vkgroup.in         — Owner (co-founder)");
-  console.log("  nationalhead@vkgroup.in   — National Head");
-  console.log("  csm@vkgroup.in            — CSM");
-  console.log("  asm@vkgroup.in            — ASM");
-  console.log("  cpe@vkgroup.in            — CPE");
+  console.log("  Tenant A — owner@vkgroup.in · asm@vkgroup.in · cpe@vkgroup.in");
+  console.log("  Tenant B — director@acme.in · manager@acme.in · agent@acme.in");
 }
 
 main()

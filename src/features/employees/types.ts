@@ -1,4 +1,11 @@
-import type { Role, EmployeeStatus } from "@prisma/client";
+import type { EmployeeStatus } from "@prisma/client";
+
+export interface LevelLite {
+  id: string;
+  name: string;
+  rank: number;
+  seesAll: boolean;
+}
 
 export interface EmployeeRow {
   id: string;
@@ -6,23 +13,11 @@ export interface EmployeeRow {
   name: string;
   email: string;
   phone: string;
-  role: Role;
+  level: LevelLite;
   status: EmployeeStatus;
   joiningDate: string;
   city: string | null;
   state: string | null;
   manager: { id: string; name: string } | null;
   _count: { reports: number; prospects: number };
-}
-
-export interface EmployeeDetail extends EmployeeRow {
-  ancestorIds: string[];
-  manager: { id: string; name: string; role: Role } | null;
-  reports: {
-    id: string;
-    name: string;
-    role: Role;
-    status: EmployeeStatus;
-    _count: { prospects: number };
-  }[];
 }

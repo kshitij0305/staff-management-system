@@ -1,22 +1,30 @@
-import type { Role, ProspectStatus, EmployeeStatus } from "@prisma/client";
+import type { ProspectStatus, EmployeeStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import {
-  ROLE_BADGE_CLASSES,
-  ROLE_LABELS,
+  levelBadgeClasses,
   PROSPECT_STATUS_CLASSES,
   PROSPECT_STATUS_LABELS,
 } from "@/lib/constants";
 
-export function RoleBadge({ role, className }: { role: Role; className?: string }) {
+/** Badge for a customer-defined hierarchy level. Colour derives from `rank`. */
+export function LevelBadge({
+  name,
+  rank,
+  className,
+}: {
+  name: string;
+  rank: number;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium",
-        ROLE_BADGE_CLASSES[role],
+        levelBadgeClasses(rank),
         className
       )}
     >
-      {ROLE_LABELS[role]}
+      {name}
     </span>
   );
 }

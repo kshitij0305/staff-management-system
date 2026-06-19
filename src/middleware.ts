@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/auth";
 
-const PUBLIC_API = ["/api/auth/login"];
+const PUBLIC_API = ["/api/auth/login", "/api/auth/signup"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await verifySessionToken(token) : null;
 
-  // Logged-in users skip the login page
-  if (pathname === "/login") {
+  // Logged-in users skip the auth pages.
+  if (pathname === "/login" || pathname === "/signup") {
     if (session) return NextResponse.redirect(new URL("/dashboard", req.url));
     return NextResponse.next();
   }
 
   if (pathname.startsWith("/api")) {
     // CSRF hardening: state-changing requests must come from our own origin.
-    // (SameSite=Lax already blocks most CSRF; this closes the rest.)
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
       const origin = req.headers.get("origin");
       if (origin) {
@@ -36,7 +35,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Dashboard pages
+  // Protected pages (dashboard + onboarding).
   if (!session) {
     const login = new URL("/login", req.url);
     if (pathname !== "/dashboard") login.searchParams.set("from", pathname);
@@ -46,5 +45,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/onboarding", "/api/:path*", "/login", "/signup"],
 };

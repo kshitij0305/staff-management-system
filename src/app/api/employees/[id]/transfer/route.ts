@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { canManageUser, seesEverything, MANAGER_ROLE } from "@/lib/rbac";
+import { canManageUser, seesEverything, managerRankFor } from "@/lib/rbac";
 import { transferEmployeeSchema } from "@/features/employees/schemas";
 import { logActivity } from "@/features/activity/log";
-import { ROLE_LABELS } from "@/lib/constants";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,9 +22,15 @@ export async function POST(req: Request, { params }: Params) {
   }
   const { managerId } = parsed.data;
 
-  const target = await prisma.user.findUnique({
-    where: { id },
-    select: { id: true, name: true, role: true, managerId: true, ancestorIds: true },
+  const target = await prisma.user.findFirst({
+    where: { id, organizationId: session.orgId },
+    select: {
+      id: true,
+      name: true,
+      managerId: true,
+      ancestorIds: true,
+      level: { select: { name: true, rank: true, seesAll: true } },
+    },
   });
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!canManageUser(session, target)) {
@@ -37,22 +42,27 @@ export async function POST(req: Request, { params }: Params) {
   if (managerId === target.id) {
     return NextResponse.json({ error: "An employee cannot manage themselves" }, { status: 400 });
   }
-
-  const requiredManagerRole = MANAGER_ROLE[target.role];
-  if (!requiredManagerRole) {
-    return NextResponse.json({ error: "The Owner cannot be transferred" }, { status: 400 });
+  if (target.level.seesAll) {
+    return NextResponse.json({ error: "A top-level owner cannot be transferred" }, { status: 400 });
   }
 
-  const newManager = await prisma.user.findUnique({
-    where: { id: managerId },
-    select: { id: true, name: true, role: true, status: true, ancestorIds: true },
+  const requiredRank = managerRankFor(target.level.rank);
+  const newManager = await prisma.user.findFirst({
+    where: { id: managerId, organizationId: session.orgId },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      ancestorIds: true,
+      level: { select: { rank: true } },
+    },
   });
   if (!newManager || newManager.status === "INACTIVE") {
     return NextResponse.json({ error: "Manager not found or inactive" }, { status: 400 });
   }
-  if (newManager.role !== requiredManagerRole) {
+  if (newManager.level.rank !== requiredRank) {
     return NextResponse.json(
-      { error: `A ${ROLE_LABELS[target.role]} must report to a ${ROLE_LABELS[requiredManagerRole]}` },
+      { error: `A ${target.level.name} must report to the level directly above it` },
       { status: 400 }
     );
   }
@@ -63,7 +73,7 @@ export async function POST(req: Request, { params }: Params) {
     );
   }
   if (
-    !seesEverything(session.role) &&
+    !seesEverything(session) &&
     newManager.id !== session.sub &&
     !newManager.ancestorIds.includes(session.sub)
   ) {
@@ -73,7 +83,7 @@ export async function POST(req: Request, { params }: Params) {
   // Rebuild ancestor paths: target first, then BFS through the subtree.
   const newTargetAncestors = [...newManager.ancestorIds, newManager.id];
   const subtree = await prisma.user.findMany({
-    where: { ancestorIds: { has: target.id } },
+    where: { organizationId: session.orgId, ancestorIds: { has: target.id } },
     select: { id: true, managerId: true, ancestorIds: true },
   });
 
@@ -108,6 +118,7 @@ export async function POST(req: Request, { params }: Params) {
   ]);
 
   await logActivity({
+    organizationId: session.orgId,
     actorId: session.sub,
     action: "EMPLOYEE_TRANSFERRED",
     targetType: "USER",

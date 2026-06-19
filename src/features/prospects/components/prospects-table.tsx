@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 import { ContactRound, Download, MapPin, Pencil, Plus, Search } from "lucide-react";
-import { ProspectStatus, Role } from "@prisma/client";
+import { ProspectStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,7 +41,7 @@ const PAGE_SIZE = 15;
 
 export function ProspectsTable() {
   const session = useSession();
-  const isManager = session.role !== Role.CPE;
+  const isManager = session.seesAll || session.levelRank > 1;
 
   const [q, setQ] = useState("");
   const debouncedQ = useDebouncedValue(q);

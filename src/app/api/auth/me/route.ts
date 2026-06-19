@@ -14,12 +14,12 @@ export async function GET() {
       name: true,
       email: true,
       phone: true,
-      role: true,
+      level: { select: { name: true, rank: true, seesAll: true } },
       status: true,
       joiningDate: true,
       city: true,
       state: true,
-      manager: { select: { id: true, name: true, role: true } },
+      manager: { select: { id: true, name: true, level: { select: { name: true } } } },
     },
   });
   if (!user || user.status === "INACTIVE") {

@@ -16,11 +16,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "VK Group Staff",
-    template: "%s · VK Group Staff",
+    default: "Hierly — your org's CRM, your hierarchy",
+    template: "%s · Hierly",
   },
   description:
-    "VK Group Staff Management System — employees, hierarchy and prospect management.",
+    "Hierly is a multi-tenant CRM where every company defines its own hierarchy and tracks prospects across the team.",
 };
 
 export default function RootLayout({

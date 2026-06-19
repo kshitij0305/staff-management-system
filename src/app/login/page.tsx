@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Logo } from "@/components/logo";
 import { LoginArt } from "@/components/illustrations/login-art";
 import { LoginForm } from "@/features/auth/components/login-form";
+import { APP_NAME } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -24,7 +25,7 @@ export default function LoginPage() {
           </div>
         </div>
         <p className="text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} VK Group · APN Solar Energy Pvt. Ltd.
+          © {new Date().getFullYear()} {APP_NAME}
         </p>
       </div>
 

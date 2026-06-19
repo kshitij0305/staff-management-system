@@ -2,22 +2,23 @@ import Link from "next/link";
 import { ArrowRight, BarChart3, Network, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { APP_NAME } from "@/lib/constants";
 
 const FEATURES = [
   {
     icon: Network,
-    title: "Hierarchy built in",
-    body: "Owner to CPE — one org chart, clear reporting lines, instant transfers.",
+    title: "Your own hierarchy",
+    body: "Name your levels — Owner, Manager, Agent, whatever fits — and Hierly builds the org chart and reporting lines.",
   },
   {
     icon: BarChart3,
-    title: "Live performance",
-    body: "Prospect trends, leaderboards and interest rates, scoped to what you manage.",
+    title: "Prospects & performance",
+    body: "Every team member logs prospects; trends, leaderboards and interest rates roll up the tree in real time.",
   },
   {
     icon: ShieldCheck,
-    title: "Role-based access",
-    body: "Everyone sees exactly their team and nothing more, enforced on every request.",
+    title: "Isolated & secure",
+    body: "Each company's data is fully isolated, and everyone sees exactly their slice — enforced on every request.",
   },
 ];
 
@@ -52,23 +53,26 @@ export default function LandingPage() {
       <main className="flex flex-1 flex-col items-center justify-center px-6 pb-20 text-center">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <span className="rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-            VK Group · APN Solar Energy Pvt. Ltd.
+            Multi-tenant team CRM
           </span>
           <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-            Your whole sales force,{" "}
-            <span className="bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
-              one portal
+            Build your team&apos;s CRM,{" "}
+            <span className="bg-gradient-to-r from-emerald-500 to-green-600 bg-clip-text text-transparent">
+              your hierarchy
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Manage employees, track every field visit and watch performance roll up the hierarchy —
-            from CPE to Owner, in real time.
+            Define your own levels, build your org tree, and track prospects across the whole team —
+            a CRM shaped exactly like your company, ready in minutes.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Button size="lg" asChild>
-              <Link href="/login">
-                Open dashboard <ArrowRight className="size-4" />
+              <Link href="/signup">
+                Start free <ArrowRight className="size-4" />
               </Link>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/login">Sign in</Link>
             </Button>
           </div>
         </div>
@@ -91,7 +95,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="px-6 py-5 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} VK Group — Staff Management System
+        © {new Date().getFullYear()} {APP_NAME}
       </footer>
     </div>
   );

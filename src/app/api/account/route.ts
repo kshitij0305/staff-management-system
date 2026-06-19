@@ -61,6 +61,7 @@ export async function PATCH(req: Request) {
 
   await prisma.user.update({ where: { id: user.id }, data });
   await logActivity({
+    organizationId: session.orgId,
     actorId: user.id,
     action: "EMPLOYEE_UPDATED",
     targetType: "USER",

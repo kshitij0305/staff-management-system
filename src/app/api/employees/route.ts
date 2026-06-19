@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { Prisma, Role, EmployeeStatus } from "@prisma/client";
+import { Prisma, EmployeeStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { canCreate, scopedUserWhere, seesEverything, MANAGER_ROLE } from "@/lib/rbac";
+import { canCreateRank, scopedUserWhere, seesEverything, managerRankFor } from "@/lib/rbac";
 import { createEmployeeSchema } from "@/features/employees/schemas";
 import { logActivity } from "@/features/activity/log";
-import { ROLE_LABELS } from "@/lib/constants";
 
 export async function GET(req: Request) {
   const session = await getSession();
@@ -14,7 +13,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim();
-  const role = url.searchParams.get("role");
+  const levelId = url.searchParams.get("levelId");
   const status = url.searchParams.get("status");
   const managerId = url.searchParams.get("managerId");
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
@@ -23,7 +22,7 @@ export async function GET(req: Request) {
   const where: Prisma.UserWhereInput = {
     AND: [
       scopedUserWhere(session),
-      role && Object.values(Role).includes(role as Role) ? { role: role as Role } : {},
+      levelId ? { levelId } : {},
       status && Object.values(EmployeeStatus).includes(status as EmployeeStatus)
         ? { status: status as EmployeeStatus }
         : {},
@@ -53,7 +52,7 @@ export async function GET(req: Request) {
         name: true,
         email: true,
         phone: true,
-        role: true,
+        level: { select: { id: true, name: true, rank: true, seesAll: true } },
         status: true,
         joiningDate: true,
         city: true,
@@ -67,13 +66,14 @@ export async function GET(req: Request) {
   return NextResponse.json({ employees, total, page, pageSize });
 }
 
+/** Globally-unique employee id. */
 async function nextEmployeeId(): Promise<string> {
   const last = await prisma.user.findFirst({
     orderBy: { employeeId: "desc" },
     select: { employeeId: true },
   });
   const lastNum = last ? Number(last.employeeId.replace(/\D/g, "")) : 0;
-  return `VK-${String(lastNum + 1).padStart(4, "0")}`;
+  return `EMP-${String(lastNum + 1).padStart(4, "0")}`;
 }
 
 export async function POST(req: Request) {
@@ -89,42 +89,46 @@ export async function POST(req: Request) {
   }
   const input = parsed.data;
 
-  if (!canCreate(session.role, input.role)) {
+  // Target level must belong to the actor's org.
+  const targetLevel = await prisma.level.findFirst({
+    where: { id: input.levelId, orgId: session.orgId },
+  });
+  if (!targetLevel) {
+    return NextResponse.json({ error: "Unknown level" }, { status: 400 });
+  }
+  if (!canCreateRank(session, targetLevel.rank)) {
     return NextResponse.json(
-      { error: `A ${ROLE_LABELS[session.role]} cannot create a ${ROLE_LABELS[input.role]}` },
+      { error: `You can't create someone at the "${targetLevel.name}" level` },
       { status: 403 }
     );
   }
 
-  // Resolve the manager: explicit managerId, or the actor themselves when their role fits.
-  const requiredManagerRole = MANAGER_ROLE[input.role];
-  if (!requiredManagerRole) {
-    return NextResponse.json({ error: "Cannot create another Owner" }, { status: 400 });
-  }
+  // Resolve the manager: explicit managerId, or the actor when their rank fits.
+  const requiredRank = managerRankFor(targetLevel.rank);
   let managerId = input.managerId;
-  if (!managerId && session.role === requiredManagerRole) managerId = session.sub;
+  if (!managerId && session.levelRank === requiredRank) managerId = session.sub;
   if (!managerId) {
     return NextResponse.json(
-      { error: `Pick the ${ROLE_LABELS[requiredManagerRole]} this employee reports to` },
+      { error: "Pick the manager this employee reports to" },
       { status: 400 }
     );
   }
-  const manager = await prisma.user.findUnique({
-    where: { id: managerId },
-    select: { id: true, name: true, role: true, status: true, ancestorIds: true },
+  const manager = await prisma.user.findFirst({
+    where: { id: managerId, organizationId: session.orgId },
+    select: { id: true, name: true, status: true, ancestorIds: true, level: { select: { rank: true } } },
   });
   if (!manager || manager.status === "INACTIVE") {
     return NextResponse.json({ error: "Manager not found or inactive" }, { status: 400 });
   }
-  if (manager.role !== requiredManagerRole) {
+  if (manager.level.rank !== requiredRank) {
     return NextResponse.json(
-      { error: `A ${ROLE_LABELS[input.role]} must report to a ${ROLE_LABELS[requiredManagerRole]}` },
+      { error: `A "${targetLevel.name}" must report to the level directly above it` },
       { status: 400 }
     );
   }
   // The chosen manager must be the actor or inside the actor's scope.
   if (
-    !seesEverything(session.role) &&
+    !seesEverything(session) &&
     manager.id !== session.sub &&
     !manager.ancestorIds.includes(session.sub)
   ) {
@@ -134,12 +138,13 @@ export async function POST(req: Request) {
   try {
     const user = await prisma.user.create({
       data: {
+        organizationId: session.orgId,
         employeeId: await nextEmployeeId(),
         name: input.name,
         email: input.email,
         phone: input.phone,
         passwordHash: await bcrypt.hash(input.password, 10),
-        role: input.role,
+        levelId: targetLevel.id,
         managerId: manager.id,
         ancestorIds: [...manager.ancestorIds, manager.id],
         joiningDate: input.joiningDate ?? new Date(),
@@ -147,15 +152,16 @@ export async function POST(req: Request) {
         state: input.state || null,
         avatarSeed: input.name,
       },
-      select: { id: true, name: true, role: true, employeeId: true },
+      select: { id: true, name: true, employeeId: true },
     });
 
     await logActivity({
+      organizationId: session.orgId,
       actorId: session.sub,
       action: "EMPLOYEE_CREATED",
       targetType: "USER",
       targetId: user.id,
-      summary: `added ${user.name} as ${ROLE_LABELS[user.role]} (reports to ${manager.name})`,
+      summary: `added ${user.name} as ${targetLevel.name} (reports to ${manager.name})`,
     });
 
     return NextResponse.json({ employee: user }, { status: 201 });

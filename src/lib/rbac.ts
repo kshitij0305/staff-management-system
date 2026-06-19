@@ -1,77 +1,87 @@
-import { Role } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import type { SessionPayload } from "./auth";
 
-/** Higher rank = higher in the hierarchy. */
-export const ROLE_RANK: Record<Role, number> = {
-  OWNER: 5,
-  NATIONAL_HEAD: 4,
-  CSM: 3,
-  ASM: 2,
-  CPE: 1,
-};
+/**
+ * Authorization is fully data-driven now: an org defines its own ordered
+ * `Level` records (rank 1 = leaf … N = top). All checks operate on rank.
+ *
+ * The #1 safety rule: every User/Prospect/ActivityLog query goes through a
+ * `scoped*` helper so `organizationId` is ALWAYS applied — that's what keeps
+ * tenants isolated.
+ */
 
-/** Which roles each role is allowed to create (always as their own direct reports, except Owner). */
-export const CREATABLE_ROLES: Record<Role, Role[]> = {
-  OWNER: [Role.NATIONAL_HEAD, Role.CSM, Role.ASM, Role.CPE],
-  NATIONAL_HEAD: [Role.CSM],
-  CSM: [Role.ASM],
-  ASM: [Role.CPE],
-  CPE: [],
-};
-
-/** The role a manager of the given role must hold. */
-export const MANAGER_ROLE: Partial<Record<Role, Role>> = {
-  NATIONAL_HEAD: Role.OWNER,
-  CSM: Role.NATIONAL_HEAD,
-  ASM: Role.CSM,
-  CPE: Role.ASM,
-};
-
-export function canCreate(actor: Role, target: Role): boolean {
-  return CREATABLE_ROLES[actor].includes(target);
+/** Top-level users (seesAll) see the whole org; everyone else, only their subtree. */
+export function seesEverything(session: SessionPayload): boolean {
+  return session.seesAll;
 }
 
-/** Owner and National Head see the whole company. */
-export function seesEverything(role: Role): boolean {
-  return role === Role.OWNER || role === Role.NATIONAL_HEAD;
-}
-
-/** Visibility filter for User queries: everything, or self + own subtree. */
+/** Visibility filter for User queries — org-scoped, plus subtree for non-top levels. */
 export function scopedUserWhere(session: SessionPayload): Prisma.UserWhereInput {
-  if (seesEverything(session.role)) return {};
-  return { OR: [{ id: session.sub }, { ancestorIds: { has: session.sub } }] };
+  const tenant: Prisma.UserWhereInput = { organizationId: session.orgId };
+  if (session.seesAll) return tenant;
+  return {
+    AND: [tenant, { OR: [{ id: session.sub }, { ancestorIds: { has: session.sub } }] }],
+  };
 }
 
-/** Visibility filter for Prospect queries: everything, or collected by self / own subtree. */
+/** Visibility filter for Prospect queries — org-scoped, plus collector-subtree for non-top levels. */
 export function scopedProspectWhere(session: SessionPayload): Prisma.ProspectWhereInput {
-  if (seesEverything(session.role)) return {};
+  const tenant: Prisma.ProspectWhereInput = { organizationId: session.orgId };
+  if (session.seesAll) return tenant;
   return {
-    OR: [
-      { collectedById: session.sub },
-      { collectedBy: { is: { ancestorIds: { has: session.sub } } } },
+    AND: [
+      tenant,
+      {
+        OR: [
+          { collectedById: session.sub },
+          { collectedBy: { is: { ancestorIds: { has: session.sub } } } },
+        ],
+      },
     ],
   };
 }
 
-/** Visibility filter for ActivityLog queries. */
+/** Visibility filter for ActivityLog queries — org-scoped, plus actor-subtree for non-top levels. */
 export function scopedActivityWhere(session: SessionPayload): Prisma.ActivityLogWhereInput {
-  if (seesEverything(session.role)) return {};
+  const tenant: Prisma.ActivityLogWhereInput = { organizationId: session.orgId };
+  if (session.seesAll) return tenant;
   return {
-    OR: [
-      { actorId: session.sub },
-      { actor: { is: { ancestorIds: { has: session.sub } } } },
+    AND: [
+      tenant,
+      {
+        OR: [
+          { actorId: session.sub },
+          { actor: { is: { ancestorIds: { has: session.sub } } } },
+        ],
+      },
     ],
   };
+}
+
+/**
+ * Which level rank a given actor may create. Top level (seesAll) can create
+ * anyone below them; everyone else can only create the level directly beneath.
+ */
+export function canCreateRank(
+  actor: { levelRank: number; seesAll: boolean },
+  targetRank: number
+): boolean {
+  if (targetRank >= actor.levelRank) return false; // never create a peer or senior
+  if (actor.seesAll) return true; // top can create any level below
+  return targetRank === actor.levelRank - 1; // others: only the level directly below
+}
+
+/** The rank a manager of a user at `rank` must hold (one level up). */
+export function managerRankFor(rank: number): number {
+  return rank + 1;
 }
 
 /** True if `session` may manage (edit/deactivate/transfer) the target user. */
 export function canManageUser(
   session: SessionPayload,
-  target: { id: string; role: Role; ancestorIds: string[] }
+  target: { id: string; ancestorIds: string[] }
 ): boolean {
-  if (target.id === session.sub) return false;
-  if (session.role === Role.OWNER) return true;
-  if (session.role === Role.NATIONAL_HEAD) return ROLE_RANK[target.role] < ROLE_RANK.NATIONAL_HEAD;
-  return target.ancestorIds.includes(session.sub);
+  if (target.id === session.sub) return false; // use Settings for yourself
+  if (session.seesAll) return true; // top level manages anyone in the org
+  return target.ancestorIds.includes(session.sub); // others: only their subtree
 }

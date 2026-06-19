@@ -16,7 +16,6 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Logo } from "@/components/logo";
 import { UserAvatar } from "@/components/user-avatar";
-import { ROLE_LABELS } from "@/lib/constants";
 import { useSession } from "./session-provider";
 import { ThemeToggle } from "./theme-toggle";
 import { PaletteButton } from "./command-palette";
@@ -82,7 +81,7 @@ export function Topbar() {
           <DropdownMenuLabel>
             <div className="text-sm font-medium">{session.name}</div>
             <div className="text-xs font-normal text-muted-foreground">
-              {ROLE_LABELS[session.role]} · {session.employeeId}
+              {session.levelName} · {session.employeeId}
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />

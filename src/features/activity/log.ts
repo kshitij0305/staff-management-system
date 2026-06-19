@@ -12,6 +12,7 @@ export type ActivityAction =
   | "USER_LOGIN";
 
 export async function logActivity(args: {
+  organizationId: string;
   actorId: string;
   action: ActivityAction;
   targetType: "USER" | "PROSPECT" | "AUTH";
@@ -22,6 +23,7 @@ export async function logActivity(args: {
   try {
     await prisma.activityLog.create({
       data: {
+        organizationId: args.organizationId,
         actorId: args.actorId,
         action: args.action,
         targetType: args.targetType,

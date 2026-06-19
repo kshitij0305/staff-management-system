@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { ROLE_LABELS } from "@/lib/constants";
 import { getCpeData, getOverviewData } from "@/features/dashboard/data";
 import { OverviewDashboard } from "@/features/dashboard/components/overview-dashboard";
 import { CpeDashboard } from "@/features/dashboard/components/cpe-dashboard";
@@ -19,7 +18,8 @@ export default async function DashboardPage() {
 
   const firstName = session.name.split(" ")[0];
 
-  if (session.role === "CPE") {
+  // Leaf-level users (manage nobody) get the personal dashboard.
+  if (!session.seesAll && session.levelRank === 1) {
     const data = await getCpeData(session);
     return (
       <div className="mx-auto max-w-6xl">
@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   }
 
   const data = await getOverviewData(session);
-  const variant = session.role === "OWNER" || session.role === "NATIONAL_HEAD" ? "executive" : "manager";
+  const variant = session.seesAll ? "executive" : "manager";
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
         <p className="text-sm text-muted-foreground">
           {variant === "executive"
             ? "Here's how the company is performing."
-            : `Here's how your team is performing, ${ROLE_LABELS[session.role]}.`}
+            : "Here's how your team is performing."}
         </p>
       </div>
       <OverviewDashboard data={data} variant={variant} />

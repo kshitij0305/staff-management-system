@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ROLE_LABELS } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
-import { RoleBadge } from "@/components/badges";
+import { LevelBadge } from "@/components/badges";
 import { UserAvatar } from "@/components/user-avatar";
 import { AccountSettings } from "@/features/settings/components/account-settings";
 
@@ -22,7 +21,7 @@ export default async function SettingsPage() {
       name: true,
       email: true,
       phone: true,
-      role: true,
+      level: { select: { name: true, rank: true } },
       city: true,
       state: true,
       joiningDate: true,
@@ -44,10 +43,10 @@ export default async function SettingsPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-base font-semibold">{user.name}</span>
-              <RoleBadge role={user.role} />
+              <LevelBadge name={user.level.name} rank={user.level.rank} />
             </div>
             <div className="mt-0.5 text-sm text-muted-foreground">
-              {ROLE_LABELS[user.role]} · {user.employeeId}
+              {user.level.name} · {user.employeeId}
               {user.manager && <> · reports to {user.manager.name}</>}
             </div>
           </div>

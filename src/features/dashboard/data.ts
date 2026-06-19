@@ -1,13 +1,18 @@
 import { format, startOfDay, subDays, isSameDay } from "date-fns";
-import { ProspectStatus, Role } from "@prisma/client";
+import { ProspectStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { SessionPayload } from "@/lib/auth";
 import { scopedActivityWhere, scopedProspectWhere, scopedUserWhere } from "@/lib/rbac";
 
+interface LevelLite {
+  name: string;
+  rank: number;
+}
+
 export interface LeaderRow {
   id: string;
   name: string;
-  role: Role;
+  level: LevelLite;
   count: number;
   interested: number;
 }
@@ -15,7 +20,7 @@ export interface LeaderRow {
 export interface TeamMemberRow {
   id: string;
   name: string;
-  role: Role;
+  level: LevelLite;
   status: string;
   count30: number;
   interested30: number;
@@ -39,8 +44,8 @@ export interface OverviewData {
   trend30: { label: string; value: number }[];
   statusSplit: { status: ProspectStatus; count: number }[];
   byState: { state: string; count: number }[];
-  topCpes: LeaderRow[];
-  topAsms: LeaderRow[];
+  topCollectors: LeaderRow[];
+  topManagers: LeaderRow[];
   team: TeamMemberRow[];
   activity: ActivityRow[];
 }
@@ -52,7 +57,13 @@ export async function getOverviewData(session: SessionPayload): Promise<Overview
   const [users, prospects, activity] = await Promise.all([
     prisma.user.findMany({
       where: scopedUserWhere(session),
-      select: { id: true, name: true, role: true, status: true, managerId: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        managerId: true,
+        level: { select: { name: true, rank: true } },
+      },
     }),
     prisma.prospect.findMany({
       where: { AND: [scopedProspectWhere(session), { visitDate: { gte: since37 } }] },
@@ -90,8 +101,8 @@ export async function getOverviewData(session: SessionPayload): Promise<Overview
 
   const statusCount = new Map<ProspectStatus, number>();
   const stateCount = new Map<string, number>();
-  const byCpe = new Map<string, { count: number; interested: number }>();
-  const byAsm = new Map<string, { count: number; interested: number }>();
+  const byCollector = new Map<string, { count: number; interested: number }>();
+  const byManager = new Map<string, { count: number; interested: number }>();
 
   for (const p of prospects) {
     const isInterested = p.status === ProspectStatus.INTERESTED;
@@ -110,16 +121,16 @@ export async function getOverviewData(session: SessionPayload): Promise<Overview
 
       const collector = userById.get(p.collectedById);
       if (collector) {
-        const cpe = byCpe.get(collector.id) ?? { count: 0, interested: 0 };
-        cpe.count += 1;
-        if (isInterested) cpe.interested += 1;
-        byCpe.set(collector.id, cpe);
+        const c = byCollector.get(collector.id) ?? { count: 0, interested: 0 };
+        c.count += 1;
+        if (isInterested) c.interested += 1;
+        byCollector.set(collector.id, c);
 
         if (collector.managerId) {
-          const asm = byAsm.get(collector.managerId) ?? { count: 0, interested: 0 };
-          asm.count += 1;
-          if (isInterested) asm.interested += 1;
-          byAsm.set(collector.managerId, asm);
+          const m = byManager.get(collector.managerId) ?? { count: 0, interested: 0 };
+          m.count += 1;
+          if (isInterested) m.interested += 1;
+          byManager.set(collector.managerId, m);
         }
       }
     }
@@ -129,22 +140,22 @@ export async function getOverviewData(session: SessionPayload): Promise<Overview
     [...map.entries()]
       .map(([id, stats]) => {
         const u = userById.get(id);
-        return u ? { id, name: u.name, role: u.role, ...stats } : null;
+        return u ? { id, name: u.name, level: u.level, ...stats } : null;
       })
       .filter((row): row is LeaderRow => row !== null)
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-  // Direct reports performance (for ASM/CSM team table)
+  // Direct reports performance (for a manager's team table)
   const team: TeamMemberRow[] = users
     .filter((u) => u.managerId === session.sub)
     .map((u) => ({
       id: u.id,
       name: u.name,
-      role: u.role,
+      level: u.level,
       status: u.status,
-      count30: byCpe.get(u.id)?.count ?? byAsm.get(u.id)?.count ?? 0,
-      interested30: byCpe.get(u.id)?.interested ?? byAsm.get(u.id)?.interested ?? 0,
+      count30: byCollector.get(u.id)?.count ?? byManager.get(u.id)?.count ?? 0,
+      interested30: byCollector.get(u.id)?.interested ?? byManager.get(u.id)?.interested ?? 0,
     }))
     .sort((a, b) => b.count30 - a.count30);
 
@@ -161,8 +172,9 @@ export async function getOverviewData(session: SessionPayload): Promise<Overview
       .map(([state, count]) => ({ state, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 6),
-    topCpes: toLeaders(byCpe).filter((l) => l.role === Role.CPE),
-    topAsms: toLeaders(byAsm),
+    // Top individual collectors (leaf level) and top managers (one level up).
+    topCollectors: toLeaders(byCollector).filter((l) => l.level.rank === 1),
+    topManagers: toLeaders(byManager),
     team,
     activity: activity.map((a) => ({
       id: a.id,
@@ -195,7 +207,7 @@ export async function getCpeData(session: SessionPayload): Promise<CpeData> {
   const since60 = startOfDay(subDays(now, 59));
 
   const prospects = await prisma.prospect.findMany({
-    where: { collectedById: session.sub, visitDate: { gte: since60 } },
+    where: { organizationId: session.orgId, collectedById: session.sub, visitDate: { gte: since60 } },
     orderBy: { visitDate: "desc" },
     select: { id: true, customerName: true, city: true, status: true, visitDate: true },
   });

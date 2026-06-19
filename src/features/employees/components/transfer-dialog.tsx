@@ -21,16 +21,9 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/user-avatar";
-import { MANAGER_ROLE } from "@/lib/rbac";
-import { ROLE_LABELS } from "@/lib/constants";
-import type { Role } from "@prisma/client";
+import type { EmployeeRow, LevelLite } from "../types";
 
-interface TransferTarget {
-  id: string;
-  name: string;
-  role: Role;
-  manager?: { id: string; name: string } | null;
-}
+type TransferTarget = Pick<EmployeeRow, "id" | "name" | "level" | "manager">;
 
 export function TransferDialog({
   open,
@@ -43,27 +36,39 @@ export function TransferDialog({
   employee: TransferTarget | null;
   onSaved: () => void;
 }) {
+  const [managerLevel, setManagerLevel] = useState<LevelLite | null>(null);
   const [managers, setManagers] = useState<{ id: string; name: string; employeeId: string }[] | null>(null);
   const [managerId, setManagerId] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const requiredRole = employee ? MANAGER_ROLE[employee.role] : undefined;
+  // A transferred employee reports one level up.
+  const requiredRank = employee ? employee.level.rank + 1 : null;
 
   useEffect(() => {
-    if (!open || !employee || !requiredRole) return;
+    if (!open || !employee || requiredRank === null) return;
     setManagerId("");
     setManagers(null);
-    fetch(`/api/employees?role=${requiredRole}&status=ACTIVE&pageSize=200`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) =>
-        setManagers(
-          (data?.employees ?? []).filter(
-            (m: { id: string }) => m.id !== employee.manager?.id && m.id !== employee.id
-          )
+    setManagerLevel(null);
+    (async () => {
+      const levelsRes = await fetch("/api/levels").then((r) => (r.ok ? r.json() : null));
+      const lvl: LevelLite | undefined = (levelsRes?.levels ?? []).find(
+        (l: LevelLite) => l.rank === requiredRank
+      );
+      if (!lvl) {
+        setManagers([]);
+        return;
+      }
+      setManagerLevel(lvl);
+      const empRes = await fetch(`/api/employees?levelId=${lvl.id}&status=ACTIVE&pageSize=200`).then(
+        (r) => (r.ok ? r.json() : null)
+      );
+      setManagers(
+        (empRes?.employees ?? []).filter(
+          (m: { id: string }) => m.id !== employee.manager?.id && m.id !== employee.id
         )
-      )
-      .catch(() => setManagers([]));
-  }, [open, employee, requiredRole]);
+      );
+    })().catch(() => setManagers([]));
+  }, [open, employee, requiredRank]);
 
   async function submit() {
     if (!employee || !managerId || saving) return;
@@ -95,9 +100,8 @@ export function TransferDialog({
         <DialogHeader>
           <DialogTitle>Transfer {employee.name}</DialogTitle>
           <DialogDescription>
-            Move this {ROLE_LABELS[employee.role]} under a different{" "}
-            {requiredRole ? ROLE_LABELS[requiredRole] : "manager"}. Their whole team moves with
-            them.
+            Move this {employee.level.name} under a different{" "}
+            {managerLevel ? managerLevel.name : "manager"}. Their whole team moves with them.
           </DialogDescription>
         </DialogHeader>
 

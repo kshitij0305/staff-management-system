@@ -7,14 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  OWNER
-  NATIONAL_HEAD
-  CSM
-  ASM
-  CPE
-}
-
 enum EmployeeStatus {
   ACTIVE
   INACTIVE
@@ -26,72 +18,115 @@ enum ProspectStatus {
   FOLLOW_UP
 }
 
+/// A tenant. Every other record belongs to exactly one Organization.
+model Organization {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  onboarded Boolean  @default(false) // has the hierarchy wizard been completed?
+  createdAt DateTime @default(now())
+
+  levels    Level[]
+  users     User[]
+  prospects Prospect[]
+  logs      ActivityLog[]
+}
+
+/// A customer-named tier in an org's hierarchy. Replaces the old fixed Role enum.
+/// `rank` orders levels: 1 = leaf (most junior) … N = top (most senior).
+model Level {
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  orgId   String  @db.ObjectId
+  org     Organization @relation(fields: [orgId], references: [id])
+  name    String  // e.g. "Founder", "Regional Head", "Agent"
+  rank    Int
+  seesAll Boolean @default(false) // top level(s) see the whole org
+
+  users   User[]
+
+  @@unique([orgId, rank])
+  @@index([orgId])
+}
+
 model User {
-  id           String         @id @default(auto()) @map("_id") @db.ObjectId
-  employeeId   String         @unique
-  name         String
-  email        String         @unique
-  phone        String
-  passwordHash String
-  role         Role
-  status       EmployeeStatus @default(ACTIVE)
-  joiningDate  DateTime       @default(now())
-  managerId    String?        @db.ObjectId
-  manager      User?          @relation("Hierarchy", fields: [managerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  reports      User[]         @relation("Hierarchy")
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId     String         @unique
+  name           String
+  email          String         @unique
+  phone          String
+  passwordHash   String
+  status         EmployeeStatus @default(ACTIVE)
+  joiningDate    DateTime       @default(now())
+
+  organizationId String         @db.ObjectId
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+
+  levelId        String         @db.ObjectId
+  level          Level          @relation(fields: [levelId], references: [id])
+
+  managerId      String?        @db.ObjectId
+  manager        User?          @relation("Hierarchy", fields: [managerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  reports        User[]         @relation("Hierarchy")
 
   // Materialized path: ids of every ancestor up to the root.
   // Subtree queries become a single indexed `ancestorIds has <id>` filter.
-  ancestorIds  String[]       @db.ObjectId
+  ancestorIds    String[]       @db.ObjectId
 
-  city         String?
-  state        String?
-  avatarSeed   String?
+  city           String?
+  state          String?
+  avatarSeed     String?
 
-  prospects    Prospect[]
-  activityLogs ActivityLog[]
+  prospects      Prospect[]
+  activityLogs   ActivityLog[]
 
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
+  @@index([organizationId])
   @@index([managerId])
   @@index([ancestorIds])
-  @@index([role, status])
+  @@index([levelId])
 }
 
 model Prospect {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
-  customerName  String
-  phone         String
-  address       String
-  city          String
-  state         String
-  visitDate     DateTime
-  status        ProspectStatus @default(FOLLOW_UP)
-  remarks       String?
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String         @db.ObjectId
+  organization   Organization   @relation(fields: [organizationId], references: [id])
 
-  collectedById String         @db.ObjectId
-  collectedBy   User           @relation(fields: [collectedById], references: [id])
+  customerName   String
+  phone          String
+  address        String
+  city           String
+  state          String
+  visitDate      DateTime
+  status         ProspectStatus @default(FOLLOW_UP)
+  remarks        String?
 
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  collectedById  String         @db.ObjectId
+  collectedBy    User           @relation(fields: [collectedById], references: [id])
 
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([organizationId, visitDate])
   @@index([collectedById, visitDate])
   @@index([status])
-  @@index([visitDate])
 }
 
 model ActivityLog {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  actorId    String   @db.ObjectId
-  actor      User     @relation(fields: [actorId], references: [id])
-  action     String // EMPLOYEE_CREATED | EMPLOYEE_UPDATED | EMPLOYEE_DEACTIVATED | EMPLOYEE_REACTIVATED | EMPLOYEE_TRANSFERRED | PROSPECT_ADDED | PROSPECT_UPDATED | USER_LOGIN
-  targetType String // USER | PROSPECT | AUTH
-  targetId   String?  @db.ObjectId
-  summary    String
-  metadata   Json?
-  createdAt  DateTime @default(now())
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String       @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
+  actorId        String       @db.ObjectId
+  actor          User         @relation(fields: [actorId], references: [id])
+  action         String
+  targetType     String
+  targetId       String?      @db.ObjectId
+  summary        String
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
   @@index([actorId, createdAt])
-  @@index([createdAt])
 }

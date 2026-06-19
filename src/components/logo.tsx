@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { APP_NAME } from "@/lib/constants";
 
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -9,22 +10,22 @@ export function LogoMark({ className }: { className?: string }) {
       className={cn("size-8", className)}
       aria-hidden
     >
-      <rect width="40" height="40" rx="10" fill="url(#vk-logo-bg)" />
-      <g stroke="white" strokeWidth="2.4" strokeLinecap="round">
-        <circle cx="20" cy="21" r="6" fill="white" stroke="none" />
-        <path d="M20 9.5v3" />
-        <path d="M20 30.5v-3" opacity="0.55" />
-        <path d="M31.5 21h-3" />
-        <path d="M8.5 21h3" />
-        <path d="M28.1 12.9l-2.1 2.1" />
-        <path d="M11.9 12.9l2.1 2.1" />
-        <path d="M28.1 29.1l-2.1-2.1" opacity="0.55" />
-        <path d="M11.9 29.1l2.1-2.1" opacity="0.55" />
+      <rect width="40" height="40" rx="10" fill="url(#hierly-logo-bg)" />
+      {/* a small hierarchy: one node on top, two below */}
+      <g stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9">
+        <path d="M20 14v5" />
+        <path d="M20 19c0 0 -8 0 -8 6" />
+        <path d="M20 19c0 0 8 0 8 6" />
+      </g>
+      <g fill="white">
+        <circle cx="20" cy="12" r="3.2" />
+        <circle cx="12" cy="27" r="3.2" />
+        <circle cx="28" cy="27" r="3.2" />
       </g>
       <defs>
-        <linearGradient id="vk-logo-bg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f59e0b" />
-          <stop offset="1" stopColor="#ea580c" />
+        <linearGradient id="hierly-logo-bg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#10b981" />
+          <stop offset="1" stopColor="#059669" />
         </linearGradient>
       </defs>
     </svg>
@@ -36,9 +37,9 @@ export function Logo({ className, markClassName }: { className?: string; markCla
     <div className={cn("flex items-center gap-2.5", className)}>
       <LogoMark className={markClassName} />
       <div className="leading-tight">
-        <div className="text-sm font-semibold tracking-tight">VK Group</div>
+        <div className="text-sm font-semibold tracking-tight">{APP_NAME}</div>
         <div className="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
-          Staff Portal
+          CRM
         </div>
       </div>
     </div>
