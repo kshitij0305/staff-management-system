@@ -66,9 +66,10 @@ export async function GET(req: Request) {
   return NextResponse.json({ employees, total, page, pageSize });
 }
 
-/** Globally-unique employee id. */
-async function nextEmployeeId(): Promise<string> {
+/** Next employee id, unique within the org. */
+async function nextEmployeeId(orgId: string): Promise<string> {
   const last = await prisma.user.findFirst({
+    where: { organizationId: orgId },
     orderBy: { employeeId: "desc" },
     select: { employeeId: true },
   });
@@ -139,7 +140,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         organizationId: session.orgId,
-        employeeId: await nextEmployeeId(),
+        employeeId: await nextEmployeeId(session.orgId),
         name: input.name,
         email: input.email,
         phone: input.phone,
