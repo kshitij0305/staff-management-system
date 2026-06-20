@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { LoginArt } from "@/components/illustrations/login-art";
 import { LoginForm } from "@/features/auth/components/login-form";
+import { AuthAside } from "@/features/auth/components/auth-aside";
 import { APP_NAME } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -12,12 +13,14 @@ export default function LoginPage() {
     <div className="grid min-h-dvh lg:grid-cols-2">
       {/* Left: form */}
       <div className="flex flex-col px-6 py-8 sm:px-12">
-        <Logo />
-        <div className="flex flex-1 flex-col items-center justify-center">
+        <Link href="/" className="w-fit rounded-lg transition-opacity hover:opacity-80">
+          <Logo />
+        </Link>
+        <div className="flex flex-1 flex-col items-center justify-center py-10">
           <div className="w-full max-w-sm">
             <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
             <p className="mt-1.5 mb-8 text-sm text-muted-foreground">
-              Sign in to manage your team and prospects.
+              Sign in to your {APP_NAME} workspace.
             </p>
             <Suspense>
               <LoginForm />
@@ -29,34 +32,15 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Right: illustration panel */}
-      <div className="relative hidden overflow-hidden bg-[#04140d] lg:flex lg:flex-col lg:items-center lg:justify-center">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(60% 50% at 50% 20%, rgba(16,185,129,0.20) 0%, transparent 70%), radial-gradient(40% 40% at 80% 80%, rgba(5,150,105,0.12) 0%, transparent 70%)",
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.35]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
-        <LoginArt className="relative z-10 w-full max-w-lg px-10" />
-        <div className="relative z-10 mt-10 max-w-md px-10 text-center">
-          <p className="text-lg font-medium text-stone-100">
-            One portal for the whole hierarchy.
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-stone-400">
-            From the Owner&apos;s overview to every prospect a CPE collects in the field —
-            track performance, manage your team and grow together.
-          </p>
-        </div>
-      </div>
+      <AuthAside
+        headline={
+          <>
+            Your org. Your structure.{" "}
+            <span className="text-emerald-300">Your CRM.</span>
+          </>
+        }
+        sub="Sign in to manage your team, track prospects and watch performance roll up your own hierarchy."
+      />
     </div>
   );
 }
