@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PROSPECT_STATUS_LABELS } from "@/lib/constants";
+import { CustomFieldInputs } from "@/features/fields/components/custom-field-inputs";
+import type { FieldDef } from "@/features/fields/schemas";
 import type { ProspectRow } from "../types";
 
 export function ProspectFormDialog({
@@ -54,6 +56,8 @@ export function ProspectFormDialog({
   });
   const [dateOpen, setDateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [defs, setDefs] = useState<FieldDef[]>([]);
+  const [custom, setCustom] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -67,14 +71,30 @@ export function ProspectFormDialog({
       status: prospect?.status ?? ProspectStatus.FOLLOW_UP,
       remarks: prospect?.remarks ?? "",
     });
+    setCustom((prospect?.customFields as Record<string, unknown>) ?? {});
   }, [open, prospect]);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/fields")
+      .then((r) => (r.ok ? r.json() : { fields: [] }))
+      .then((d) => setDefs(d.fields ?? []))
+      .catch(() => setDefs([]));
+  }, [open]);
+
+  const missingRequired = defs.some((d) => {
+    if (!d.required) return false;
+    const v = custom[d.key];
+    return v === undefined || v === null || v === "";
+  });
 
   const canSubmit =
     form.customerName.trim().length >= 2 &&
     form.phone.trim().length >= 8 &&
     form.address.trim().length >= 3 &&
     form.city.trim().length >= 2 &&
-    form.state.trim().length >= 2;
+    form.state.trim().length >= 2 &&
+    !missingRequired;
 
   async function submit() {
     if (!canSubmit || saving) return;
@@ -83,7 +103,11 @@ export function ProspectFormDialog({
       const res = await fetch(isEdit ? `/api/prospects/${prospect!.id}` : "/api/prospects", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, visitDate: form.visitDate.toISOString() }),
+        body: JSON.stringify({
+          ...form,
+          visitDate: form.visitDate.toISOString(),
+          customFields: custom,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -104,7 +128,7 @@ export function ProspectFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit prospect" : "Add prospect"}</DialogTitle>
           <DialogDescription>
@@ -213,6 +237,12 @@ export function ProspectFormDialog({
               rows={3}
             />
           </div>
+
+          <CustomFieldInputs
+            defs={defs}
+            values={custom}
+            onChange={(key, value) => setCustom((c) => ({ ...c, [key]: value }))}
+          />
         </div>
 
         <DialogFooter>

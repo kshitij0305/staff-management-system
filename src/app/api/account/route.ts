@@ -38,7 +38,11 @@ export async function PATCH(req: Request) {
   }
   const input = parsed.data;
 
-  const user = await prisma.user.findUnique({ where: { id: session.sub } });
+  // Org-scoped even though the id is the caller's own — keeps the "every read is
+  // tenant-scoped" invariant universal, with no exceptions to refactor around.
+  const user = await prisma.user.findFirst({
+    where: { id: session.sub, organizationId: session.orgId },
+  });
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const data: Prisma.UserUpdateInput = {};

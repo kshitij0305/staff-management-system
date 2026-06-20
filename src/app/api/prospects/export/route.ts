@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { buildProspectWhere } from "@/features/prospects/query";
+import { getFieldDefs } from "@/features/fields/server";
+import { customValueToText } from "@/features/fields/display";
 import { PROSPECT_STATUS_LABELS } from "@/lib/constants";
 import { format } from "date-fns";
 
@@ -17,22 +19,26 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const where = buildProspectWhere(session, url.searchParams);
 
-  const rows = await prisma.prospect.findMany({
-    where,
-    orderBy: { visitDate: "desc" },
-    take: 5000,
-    select: {
-      customerName: true,
-      phone: true,
-      address: true,
-      city: true,
-      state: true,
-      visitDate: true,
-      status: true,
-      remarks: true,
-      collectedBy: { select: { name: true, employeeId: true } },
-    },
-  });
+  const [rows, defs] = await Promise.all([
+    prisma.prospect.findMany({
+      where,
+      orderBy: { visitDate: "desc" },
+      take: 5000,
+      select: {
+        customerName: true,
+        phone: true,
+        address: true,
+        city: true,
+        state: true,
+        visitDate: true,
+        status: true,
+        remarks: true,
+        customFields: true,
+        collectedBy: { select: { name: true, employeeId: true } },
+      },
+    }),
+    getFieldDefs(session.orgId),
+  ]);
 
   const header = [
     "Customer Name",
@@ -45,9 +51,11 @@ export async function GET(req: Request) {
     "Remarks",
     "Collected By",
     "Employee ID",
+    ...defs.map((d) => d.label),
   ];
   const lines = [header.join(",")];
   for (const r of rows) {
+    const custom = (r.customFields ?? {}) as Record<string, unknown>;
     lines.push(
       [
         r.customerName,
@@ -60,6 +68,7 @@ export async function GET(req: Request) {
         r.remarks ?? "",
         r.collectedBy.name,
         r.collectedBy.employeeId,
+        ...defs.map((d) => customValueToText(d, custom[d.key])),
       ]
         .map((v) => csvCell(String(v)))
         .join(",")

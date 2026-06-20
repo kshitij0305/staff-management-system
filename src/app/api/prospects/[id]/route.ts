@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { seesEverything } from "@/lib/rbac";
 import { updateProspectSchema } from "@/features/prospects/schemas";
+import { resolveCustomFields } from "@/features/fields/server";
 import { logActivity } from "@/features/activity/log";
 
 type Params = { params: Promise<{ id: string }> };
@@ -41,6 +43,14 @@ export async function PATCH(req: Request, { params }: Params) {
   }
   const input = parsed.data;
 
+  // When custom values are sent, validate the full set against the org's defs and replace.
+  let customFields: Prisma.InputJsonObject | undefined;
+  if (input.customFields !== undefined) {
+    const custom = await resolveCustomFields(session.orgId, input.customFields);
+    if (!custom.ok) return NextResponse.json({ error: custom.error }, { status: 400 });
+    customFields = custom.values;
+  }
+
   const updated = await prisma.prospect.update({
     where: { id },
     data: {
@@ -52,6 +62,7 @@ export async function PATCH(req: Request, { params }: Params) {
       ...(input.visitDate ? { visitDate: input.visitDate } : {}),
       ...(input.status ? { status: input.status } : {}),
       ...(input.remarks !== undefined ? { remarks: input.remarks || null } : {}),
+      ...(customFields !== undefined ? { customFields } : {}),
     },
     select: { id: true, customerName: true, status: true },
   });

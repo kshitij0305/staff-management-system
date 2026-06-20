@@ -10,6 +10,7 @@ export interface ProspectRow {
   visitDate: string;
   status: ProspectStatus;
   remarks: string | null;
+  customFields?: Record<string, unknown> | null;
   createdAt: string;
   collectedBy: { id: string; name: string; employeeId: string };
 }

@@ -18,6 +18,17 @@ enum ProspectStatus {
   FOLLOW_UP
 }
 
+/// Types a tenant can choose when defining a custom prospect field.
+enum FieldType {
+  TEXT
+  NUMBER
+  SELECT // tenant-defined option list
+  DATE
+  BOOLEAN
+  GEO // {lat,lng,accuracy} captured from the browser
+  IMAGE // url to an uploaded photo (object storage)
+}
+
 /// A tenant. Every other record belongs to exactly one Organization.
 model Organization {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -30,6 +41,25 @@ model Organization {
   users     User[]
   prospects Prospect[]
   logs      ActivityLog[]
+  fields    FieldDefinition[]
+}
+
+/// A tenant-defined custom field on the Prospect form. Values live in
+/// `Prospect.customFields` (JSON) keyed by `key`; this model is the schema.
+model FieldDefinition {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId     String       @db.ObjectId
+  org       Organization @relation(fields: [orgId], references: [id])
+  key       String // stable machine name, e.g. "next_follow_up"
+  label     String // human label shown on the form
+  type      FieldType
+  options   String[] // choices for SELECT, empty otherwise
+  required  Boolean      @default(false)
+  order     Int          @default(0) // display order on the form
+  createdAt DateTime     @default(now())
+
+  @@unique([orgId, key])
+  @@index([orgId])
 }
 
 /// A customer-named tier in an org's hierarchy. Replaces the old fixed Role enum.
@@ -102,6 +132,9 @@ model Prospect {
   visitDate      DateTime
   status         ProspectStatus @default(FOLLOW_UP)
   remarks        String?
+
+  // Tenant-defined custom field values, keyed by FieldDefinition.key.
+  customFields   Json?
 
   collectedById  String         @db.ObjectId
   collectedBy    User           @relation(fields: [collectedById], references: [id])

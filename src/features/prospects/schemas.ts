@@ -13,6 +13,8 @@ export const createProspectSchema = z.object({
   visitDate: z.coerce.date(),
   status: z.nativeEnum(ProspectStatus),
   remarks: z.string().trim().max(500).optional().or(z.literal("")),
+  // Raw tenant custom-field values; validated server-side against FieldDefinitions.
+  customFields: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateProspectInput = z.infer<typeof createProspectSchema>;
 

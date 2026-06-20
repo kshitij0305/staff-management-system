@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { createProspectSchema } from "@/features/prospects/schemas";
 import { buildProspectWhere } from "@/features/prospects/query";
+import { resolveCustomFields } from "@/features/fields/server";
 import { logActivity } from "@/features/activity/log";
 
 export async function GET(req: Request) {
@@ -31,6 +32,7 @@ export async function GET(req: Request) {
         visitDate: true,
         status: true,
         remarks: true,
+        customFields: true,
         createdAt: true,
         collectedBy: { select: { id: true, name: true, employeeId: true } },
       },
@@ -53,6 +55,9 @@ export async function POST(req: Request) {
   }
   const input = parsed.data;
 
+  const custom = await resolveCustomFields(session.orgId, input.customFields);
+  if (!custom.ok) return NextResponse.json({ error: custom.error }, { status: 400 });
+
   const prospect = await prisma.prospect.create({
     data: {
       organizationId: session.orgId,
@@ -64,6 +69,7 @@ export async function POST(req: Request) {
       visitDate: input.visitDate,
       status: input.status,
       remarks: input.remarks || null,
+      customFields: custom.values,
       collectedById: session.sub,
     },
     select: { id: true, customerName: true, city: true },

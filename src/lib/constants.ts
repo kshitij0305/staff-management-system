@@ -1,6 +1,16 @@
-import { ProspectStatus, EmployeeStatus } from "@prisma/client";
+import { ProspectStatus, EmployeeStatus, FieldType } from "@prisma/client";
 
 export const APP_NAME = "Hierly";
+
+export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
+  TEXT: "Text",
+  NUMBER: "Number",
+  SELECT: "Dropdown",
+  DATE: "Date",
+  BOOLEAN: "Checkbox",
+  GEO: "GPS location",
+  IMAGE: "Image",
+};
 
 /**
  * Hierarchy levels are customer-defined per org, so their colours are derived

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LevelBadge } from "@/components/badges";
 import { UserAvatar } from "@/components/user-avatar";
 import { AccountSettings } from "@/features/settings/components/account-settings";
+import { FieldManager } from "@/features/fields/components/field-manager";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -14,8 +15,8 @@ export default async function SettingsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.sub },
+  const user = await prisma.user.findFirst({
+    where: { id: session.sub, organizationId: session.orgId },
     select: {
       employeeId: true,
       name: true,
@@ -65,6 +66,8 @@ export default async function SettingsPage() {
           state: user.state,
         }}
       />
+
+      {session.seesAll && <FieldManager />}
     </div>
   );
 }

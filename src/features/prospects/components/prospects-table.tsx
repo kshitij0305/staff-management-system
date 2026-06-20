@@ -34,8 +34,39 @@ import { DateRangePicker, presetRange } from "@/components/date-range-picker";
 import { useDebouncedValue } from "@/hooks/use-debounced";
 import { useSession } from "@/components/shell/session-provider";
 import { PROSPECT_STATUS_LABELS } from "@/lib/constants";
+import { customValueToText } from "@/features/fields/display";
+import type { FieldDef, GeoValue } from "@/features/fields/schemas";
 import type { ProspectRow } from "../types";
 import { ProspectFormDialog } from "./prospect-form-dialog";
+
+/** Compact, type-aware rendering of a custom value in a table cell. */
+function CustomCell({ def, value }: { def: FieldDef; value: unknown }) {
+  if (value === undefined || value === null || value === "") {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  if (def.type === "GEO") {
+    const g = value as GeoValue;
+    return (
+      <a
+        href={`https://www.google.com/maps?q=${g.lat},${g.lng}`}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-1 text-emerald-600 hover:underline dark:text-emerald-400"
+      >
+        <MapPin className="size-3" /> Map
+      </a>
+    );
+  }
+  if (def.type === "IMAGE") {
+    return (
+      <a href={String(value)} target="_blank" rel="noreferrer">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={String(value)} alt={def.label} className="size-8 rounded border object-cover" />
+      </a>
+    );
+  }
+  return <span className="block max-w-32 truncate">{customValueToText(def, value)}</span>;
+}
 
 const PAGE_SIZE = 15;
 
@@ -57,8 +88,17 @@ export function ProspectsTable() {
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
   const [employees, setEmployees] = useState<{ id: string; name: string }[] | null>(null);
+  const [defs, setDefs] = useState<FieldDef[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ProspectRow | null>(null);
+
+  // Custom field definitions → extra columns.
+  useEffect(() => {
+    fetch("/api/fields")
+      .then((r) => (r.ok ? r.json() : { fields: [] }))
+      .then((d) => setDefs(d.fields ?? []))
+      .catch(() => setDefs([]));
+  }, []);
 
   useEffect(() => setPage(1), [debouncedQ, status, employeeId, range]);
 
@@ -205,6 +245,11 @@ export function ProspectsTable() {
                   {isManager && <TableHead className="hidden sm:table-cell">Collected by</TableHead>}
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Remarks</TableHead>
+                  {defs.map((d) => (
+                    <TableHead key={d.id} className="hidden xl:table-cell">
+                      {d.label}
+                    </TableHead>
+                  ))}
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
@@ -261,6 +306,11 @@ export function ProspectsTable() {
                         <span className="text-sm text-muted-foreground">—</span>
                       )}
                     </TableCell>
+                    {defs.map((d) => (
+                      <TableCell key={d.id} className="hidden text-sm xl:table-cell">
+                        <CustomCell def={d} value={p.customFields?.[d.key]} />
+                      </TableCell>
+                    ))}
                     <TableCell>
                       <Button
                         variant="ghost"
